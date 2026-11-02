@@ -11,7 +11,7 @@ import Link from "next/link";
 import { Suspense, type ComponentProps } from "react";
 
 import { BrandMark } from "@/components/brand-mark";
-import { NavLink } from "@/components/nav-link";
+import { NavLink, NavText } from "@/components/nav-link";
 import { NavUser } from "@/components/nav-user";
 import {
   Sidebar,
@@ -27,7 +27,6 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import { can, parseRoles, type Resource } from "@/lib/auth/permissions";
 import { requireSession } from "@/lib/auth/session";
-import { getI18n } from "@/lib/i18n/server";
 
 // Each link is shown only to roles that can read it; empty categories disappear.
 const navGroups: {
@@ -73,7 +72,6 @@ const navGroups: {
 
 async function RoleNav() {
   const { user } = await requireSession();
-  const { t } = await getI18n();
   const userRoles = parseRoles(user.role);
 
   return (
@@ -86,11 +84,13 @@ async function RoleNav() {
 
         return (
           <SidebarGroup key={label}>
-            <SidebarGroupLabel>{t.nav[label]}</SidebarGroupLabel>
+            <SidebarGroupLabel>
+              <NavText name={label} />
+            </SidebarGroupLabel>
             <SidebarMenu>
               {visible.map(({ title, icon: Icon, href }) => (
                 <SidebarMenuItem key={href}>
-                  <NavLink href={href} title={t.nav[title]} icon={<Icon />} />
+                  <NavLink href={href} title={title} icon={<Icon />} />
                 </SidebarMenuItem>
               ))}
             </SidebarMenu>
@@ -99,12 +99,14 @@ async function RoleNav() {
       })}
       {can(userRoles, "user", "list") && (
         <SidebarGroup className="mt-auto">
-          <SidebarGroupLabel>{t.nav.administration}</SidebarGroupLabel>
+          <SidebarGroupLabel>
+            <NavText name="administration" />
+          </SidebarGroupLabel>
           <SidebarMenu>
             <SidebarMenuItem>
               <NavLink
                 href="/staff"
-                title={t.nav.staff}
+                title="staff"
                 icon={<ShieldCheckIcon />}
               />
             </SidebarMenuItem>
@@ -121,9 +123,7 @@ async function CurrentUser() {
   return <NavUser name={user.name} email={user.email} />;
 }
 
-export async function AppSidebar(props: ComponentProps<typeof Sidebar>) {
-  const { t } = await getI18n();
-
+export function AppSidebar(props: ComponentProps<typeof Sidebar>) {
   return (
     <Sidebar collapsible="offcanvas" {...props}>
       <SidebarHeader>
@@ -133,7 +133,9 @@ export async function AppSidebar(props: ComponentProps<typeof Sidebar>) {
               <BrandMark />
               <div className="grid flex-1 text-left text-sm leading-tight">
                 <span className="truncate font-medium">Punto Bianco</span>
-                <span className="truncate text-xs">{t.nav.tagline}</span>
+                <span className="truncate text-xs">
+                  <NavText name="tagline" />
+                </span>
               </div>
             </SidebarMenuButton>
           </SidebarMenuItem>
@@ -145,7 +147,7 @@ export async function AppSidebar(props: ComponentProps<typeof Sidebar>) {
             <SidebarMenuItem>
               <NavLink
                 href="/dashboard"
-                title={t.nav.dashboard}
+                title="dashboard"
                 icon={<LayoutDashboardIcon />}
               />
             </SidebarMenuItem>

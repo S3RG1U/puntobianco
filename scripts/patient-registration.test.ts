@@ -107,3 +107,13 @@ test("ignores hidden service values after a request is unchecked", () => {
   assert.equal(result.accommodation, undefined);
   assert.equal(result.transfer, undefined);
 });
+test("a single date-time answer fills the date and time of the visit", () => {
+  const form = new FormData();
+  form.set("patient.arrival", "2026-11-18T09:30");
+  form.set("patient.departure", "2026-11-22T18:00");
+  const visit = readVisit(form, "patient");
+  assert.equal(visit.arrivalDate, "2026-11-18");
+  assert.equal(visit.arrivalTime, "09:30");
+  assert.equal(visit.departureDate, "2026-11-22");
+  assert.equal(visit.departureTime, "18:00");
+});

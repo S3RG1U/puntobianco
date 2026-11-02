@@ -6,7 +6,7 @@ import { useTransition } from "react";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { setLocale } from "@/lib/i18n/actions";
 import { useI18n } from "@/lib/i18n/client";
-import { locales } from "@/lib/i18n/config";
+import { localeNames, locales } from "@/lib/i18n/config";
 
 export function LocaleSwitcher() {
   const { locale, t } = useI18n();
@@ -30,7 +30,7 @@ export function LocaleSwitcher() {
     >
       {locales.map((option) => (
         <ToggleGroupItem key={option} value={option}>
-          {option.toUpperCase()}
+          {localeNames[option]}
         </ToggleGroupItem>
       ))}
     </ToggleGroup>

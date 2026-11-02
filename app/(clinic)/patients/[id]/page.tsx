@@ -3,6 +3,7 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { eq } from "drizzle-orm";
 import { z } from "zod";
+import { VisitTimeline } from "@/components/patients/visit-timeline";
 import { SiteHeader } from "@/components/site-header";
 import {
   Card,
@@ -13,6 +14,7 @@ import {
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { db } from "@/lib/db";
 import {
   patients,
@@ -24,6 +26,7 @@ import {
   users,
 } from "@/lib/db/schema";
 import { requireSession } from "@/lib/auth/session";
+import { listVisitEvents } from "@/lib/patients/visit-events";
 import { can, parseRoles } from "@/lib/auth/permissions";
 import { intlLocales, type Locale } from "@/lib/i18n/config";
 import { getI18n } from "@/lib/i18n/server";
@@ -103,6 +106,7 @@ async function Content({ params }: { params: Promise<{ id: string }> }) {
         .innerJoin(patients, eq(patients.id, patientVisits.patientId))
         .where(eq(patientCompanions.treatmentVisitId, id)),
     ]);
+  const timeline = await listVisitEvents([id], roles);
   const accommodation = accommodationRows[0];
   const transfer = transferRows[0];
   return (
@@ -134,6 +138,24 @@ async function Content({ params }: { params: Promise<{ id: string }> }) {
           )}
         </div>
       </div>
+      <Tabs defaultValue="overview" className="gap-4">
+        <TabsList className="w-full justify-start overflow-x-auto overflow-y-hidden">
+          <TabsTrigger value="overview">{labels.tabs.overview}</TabsTrigger>
+          {can(roles, "treatment", "read") && (
+            <TabsTrigger value="treatment">{labels.tabs.treatment}</TabsTrigger>
+          )}
+          {can(roles, "accommodation", "read") && (
+            <TabsTrigger value="accommodation">
+              {labels.tabs.accommodation}
+            </TabsTrigger>
+          )}
+          {can(roles, "transfer", "read") && (
+            <TabsTrigger value="transfer">{labels.tabs.transfer}</TabsTrigger>
+          )}
+          <TabsTrigger value="companions">{labels.tabs.companions}</TabsTrigger>
+          <TabsTrigger value="history">{labels.tabs.history}</TabsTrigger>
+        </TabsList>
+        <TabsContent value="overview">
       <Card>
         <CardHeader>
           <CardTitle>{labels.stay}</CardTitle>
@@ -163,8 +185,9 @@ async function Content({ params }: { params: Promise<{ id: string }> }) {
           </dl>
         </CardContent>
       </Card>
-      {can(roles, "treatment", "read") && (
-        <Card>
+        </TabsContent>
+        {can(roles, "treatment", "read") && (
+          <TabsContent value="treatment"><Card>
           <CardHeader>
             <CardTitle>{labels.plannedTreatment}</CardTitle>
           </CardHeader>
@@ -174,7 +197,85 @@ async function Content({ params }: { params: Promise<{ id: string }> }) {
             </p>
           </CardContent>
         </Card>
-      )}
+          </TabsContent>
+        )}
+        {can(roles, "accommodation", "read") && (
+          <TabsContent value="accommodation"><Card>
+            <CardHeader>
+              <CardTitle>{labels.accommodation}</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {accommodation ? (
+                <dl className="flex flex-col gap-3">
+                  <div>
+                    <dt className="text-sm text-muted-foreground">
+                      {labels.requestedType}
+                    </dt>
+                    <dd>
+                      {t.apartmentTypes[accommodation.request.apartmentType]}
+                    </dd>
+                  </div>
+                  <div>
+                    <dt className="text-sm text-muted-foreground">
+                      {labels.assignedApartment}
+                    </dt>
+                    <dd>{accommodation.apartment || labels.notAssigned}</dd>
+                  </div>
+                  <div>
+                    <dt className="text-sm text-muted-foreground">{t.common.terms}</dt>
+                    <dd>
+                      {accommodation.request.isFree
+                        ? labels.freeTerms(accommodation.request.freeDays)
+                        : labels.paidAccommodation}
+                    </dd>
+                  </div>
+                </dl>
+              ) : (
+                <p className="text-sm text-muted-foreground">
+                  {labels.noAccommodation}
+                </p>
+              )}
+            </CardContent>
+          </Card>
+          </TabsContent>
+        )}
+        {can(roles, "transfer", "read") && (
+          <TabsContent value="transfer"><Card>
+            <CardHeader>
+              <CardTitle>{labels.transfer}</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {transfer ? (
+                <dl className="flex flex-col gap-3">
+                  <div>
+                    <dt className="text-sm text-muted-foreground">{labels.journey}</dt>
+                    <dd>
+                      {transfer.direction === "round_trip"
+                        ? labels.roundTrip
+                        : transfer.oneWayLeg === "departure"
+                          ? labels.oneWayDeparture
+                          : labels.oneWayArrival}
+                    </dd>
+                  </div>
+                  <div>
+                    <dt className="text-sm text-muted-foreground">{t.common.terms}</dt>
+                    <dd>
+                      {transfer.isFree
+                        ? labels.freeTransfer
+                        : labels.paidTransfer}
+                    </dd>
+                  </div>
+                </dl>
+              ) : (
+                <p className="text-sm text-muted-foreground">
+                  {labels.noTransfer}
+                </p>
+              )}
+            </CardContent>
+          </Card>
+          </TabsContent>
+        )}
+        <TabsContent value="companions">
       <Card>
         <CardHeader>
           <CardTitle>{labels.companions}</CardTitle>
@@ -223,94 +324,29 @@ async function Content({ params }: { params: Promise<{ id: string }> }) {
           </div>
         </CardContent>
       </Card>
-      <div className="grid gap-6 sm:grid-cols-2">
-        {can(roles, "accommodation", "read") && (
-          <Card>
-            <CardHeader>
-              <CardTitle>{labels.accommodation}</CardTitle>
-            </CardHeader>
-            <CardContent>
-              {accommodation ? (
-                <dl className="flex flex-col gap-3">
-                  <div>
-                    <dt className="text-sm text-muted-foreground">
-                      {labels.requestedType}
-                    </dt>
-                    <dd>
-                      {t.apartmentTypes[accommodation.request.apartmentType]}
-                    </dd>
-                  </div>
-                  <div>
-                    <dt className="text-sm text-muted-foreground">
-                      {labels.assignedApartment}
-                    </dt>
-                    <dd>{accommodation.apartment || labels.notAssigned}</dd>
-                  </div>
-                  <div>
-                    <dt className="text-sm text-muted-foreground">{t.common.terms}</dt>
-                    <dd>
-                      {accommodation.request.isFree
-                        ? labels.freeTerms(accommodation.request.freeDays)
-                        : labels.paidAccommodation}
-                    </dd>
-                  </div>
-                </dl>
-              ) : (
-                <p className="text-sm text-muted-foreground">
-                  {labels.noAccommodation}
-                </p>
-              )}
-            </CardContent>
-          </Card>
-        )}
-        {can(roles, "transfer", "read") && (
-          <Card>
-            <CardHeader>
-              <CardTitle>{labels.transfer}</CardTitle>
-            </CardHeader>
-            <CardContent>
-              {transfer ? (
-                <dl className="flex flex-col gap-3">
-                  <div>
-                    <dt className="text-sm text-muted-foreground">{labels.journey}</dt>
-                    <dd>
-                      {transfer.direction === "round_trip"
-                        ? labels.roundTrip
-                        : transfer.oneWayLeg === "departure"
-                          ? labels.oneWayDeparture
-                          : labels.oneWayArrival}
-                    </dd>
-                  </div>
-                  <div>
-                    <dt className="text-sm text-muted-foreground">{t.common.terms}</dt>
-                    <dd>
-                      {transfer.isFree
-                        ? labels.freeTransfer
-                        : labels.paidTransfer}
-                    </dd>
-                  </div>
-                </dl>
-              ) : (
-                <p className="text-sm text-muted-foreground">
-                  {labels.noTransfer}
-                </p>
-              )}
-            </CardContent>
-          </Card>
-        )}
-      </div>
+        </TabsContent>
+        <TabsContent value="history">
+      <Card>
+        <CardHeader>
+          <CardTitle>{t.timeline.title}</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <VisitTimeline events={timeline.get(id) ?? []} />
+        </CardContent>
+      </Card>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }
-export default async function Page({
+export default function Page({
   params,
 }: {
   params: Promise<{ id: string }>;
 }) {
-  const { t } = await getI18n();
   return (
     <>
-      <SiteHeader title={t.patientDetail.title} />
+      <SiteHeader title="patientDetail" />
       <div className="p-4 lg:p-6">
         <Suspense fallback={<Skeleton className="h-80 w-full" />}>
           <Content params={params} />

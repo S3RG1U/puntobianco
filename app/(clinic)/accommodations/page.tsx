@@ -233,15 +233,14 @@ async function Content({
     </div>
   );
 }
-export default async function Page({
+export default function Page({
   searchParams,
 }: {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
-  const { t } = await getI18n();
   return (
     <>
-      <SiteHeader title={t.accommodations.title} />
+      <SiteHeader title="accommodations" />
       <div className="p-4 lg:p-6">
         <Suspense fallback={<Skeleton className="h-80 w-full" />}>
           <Content searchParams={searchParams} />

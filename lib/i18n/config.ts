@@ -2,6 +2,10 @@ export const locales = ["ro", "en"] as const;
 export type Locale = (typeof locales)[number];
 export const defaultLocale: Locale = "ro";
 export const LOCALE_COOKIE = "locale";
+export const localeNames: Record<Locale, string> = {
+  ro: "Română",
+  en: "English",
+};
 
 // Formatting tags for Intl and date libraries.
 export const intlLocales: Record<Locale, string> = {

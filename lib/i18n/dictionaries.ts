@@ -1,3 +1,4 @@
+import type { Locale } from "./config";
 import { en } from "./en";
 import { ro, type Dictionary } from "./ro";
 
@@ -10,6 +11,39 @@ export function validationMessage(t: Dictionary, key: string) {
   return (
     (t.validation as Record<string, string>)[key] ?? t.validation.invalid
   );
+}
+
+// Notifications are saved in Romanian, which Telegram messages also use. Each
+// " · " part is translated for display, so older notifications work as well.
+const notificationText: Record<string, string> = {
+  "Pacient înregistrat": "Patient registered",
+  "Pacient actualizat": "Patient updated",
+  "Pacient preluat": "Patient picked up",
+  "Caz nou": "New case",
+  "Caz început": "Case started",
+  "Caz finalizat": "Case completed",
+  "Cerere cazare": "Accommodation request",
+  Cazare: "Accommodation",
+  Actualizată: "Updated",
+  Neprelucrat: "Unprocessed",
+  Rezervat: "Reserved",
+  "Transfer nou": "New transfer",
+  "Transfer actualizat": "Transfer updated",
+  "Sosire și plecare": "Arrival and departure",
+  Sosire: "Arrival",
+  Plecare: "Departure",
+  "Cererea de cazare a fost actualizată.": "The accommodation request was updated.",
+};
+export function localizeNotification(locale: Locale, text: string) {
+  if (locale === "ro") return text;
+  return text
+    .split(" · ")
+    .map(
+      (part) =>
+        notificationText[part] ??
+        part.replace(/^Sosire /, "Arrival ").replace(/^Plecare /, "Departure "),
+    )
+    .join(" · ");
 }
 
 // Field errors for a form, keyed by the field's name.

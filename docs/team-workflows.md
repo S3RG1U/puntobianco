@@ -10,7 +10,9 @@ Requests start as amber **Neprelucrat**. Assign an apartment through Manage and 
 
 ## Drivers
 
-`/transfers` opens on the month view and also has week and day views in Europe/Chisinau time. The dashboard shows the same transfers from the start of the current week, for six weeks. Arrival events are blue and departure events green. A round trip schedules both; a one-way request has an explicit arrival/departure choice. Previously registered one-way transfers default to arrival. Events show the patient and accompanying people. Drivers receive logistics only, not treatment notes.
+`/transfers` opens on the month view and also has week and day views in Europe/Chisinau time. The dashboard shows the same transfers from the start of the current week, for six weeks. Arrival events are blue and departure events green. A round trip schedules both; a one-way request has an explicit arrival/departure choice. Previously registered one-way transfers default to arrival. Events show the patient and accompanying people. Drivers receive logistics only, not treatment notes. From a transfer's day onwards, roles that can update transfers can mark it picked up in the week or day view, and press again to undo a mistake. Treated companions sharing that transfer are marked too.
+
+Each visit has a history, opened from **Istoric** in Back office or at the bottom of the patient page: registration, edits, back office steps, apartment changes and pickups, with who did them. Each viewer only sees the events their role can read. Events from before the history existed were reconstructed from saved dates, without edits, released apartments or (for registrations and completed cases) the person.
 
 ## Web notifications and synchronization
 

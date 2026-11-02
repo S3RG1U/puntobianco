@@ -10,6 +10,7 @@ import {
   text,
   timestamp,
   unique,
+  uniqueIndex,
   uuid,
 } from "drizzle-orm/pg-core";
 
@@ -295,6 +296,44 @@ export const patientTransfers = pgTable("patient_transfers", {
   direction: transferDirection("direction").notNull(),
   oneWayLeg: transferLeg("one_way_leg").notNull().default("arrival"),
 });
+
+// What happened to a visit, for its timeline. Names are copied so the history
+// stays true after an apartment is renamed. No treatment text is stored here.
+export const visitEventType = pgEnum("visit_event_type", [
+  "registered",
+  "patient_updated",
+  "case_started",
+  "case_completed",
+  "apartment_assigned",
+  "apartment_released",
+  "transfer_picked_up",
+]);
+
+export const visitEvents = pgTable(
+  "visit_events",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    visitId: uuid("visit_id")
+      .notNull()
+      .references(() => patientVisits.id, { onDelete: "cascade" }),
+    type: visitEventType("type").notNull(),
+    leg: transferLeg("leg"),
+    apartmentName: text("apartment_name"),
+    actorId: text("actor_id").references(() => users.id, {
+      onDelete: "set null",
+    }),
+    occurredAt: timestamp("occurred_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [
+    index("visit_events_visit_idx").on(t.visitId, t.occurredAt),
+    // A transfer leg is picked up once, however many people press the button.
+    uniqueIndex("visit_events_pickup_unique")
+      .on(t.visitId, t.leg)
+      .where(sql`${t.type} = 'transfer_picked_up'`),
+  ],
+);
 
 // One durable event per audience. No treatment text is stored in alerts.
 export const teamNotifications = pgTable(

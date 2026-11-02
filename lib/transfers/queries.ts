@@ -9,6 +9,7 @@ import {
   patientVisits,
   patients,
   patientCompanions,
+  visitEvents,
 } from "@/lib/db/schema";
 import { transferCalendarEvents } from "@/lib/transfers/calendar";
 
@@ -63,5 +64,23 @@ export async function listTransferEvents(start: Date, end: Date) {
           ),
         )
     : [];
-  return transferCalendarEvents(rows, companions, start, end);
+  const pickups = rows.length
+    ? await db
+        .select({ visitId: visitEvents.visitId, leg: visitEvents.leg })
+        .from(visitEvents)
+        .where(
+          and(
+            eq(visitEvents.type, "transfer_picked_up"),
+            inArray(
+              visitEvents.visitId,
+              rows.map((r) => r.visitId),
+            ),
+          ),
+        )
+    : [];
+  const pickedUp = new Set(pickups.map((p) => `${p.visitId}:${p.leg}`));
+  return transferCalendarEvents(rows, companions, start, end).map((event) => ({
+    ...event,
+    pickedUp: pickedUp.has(`${event.visitId}:${event.leg}`),
+  }));
 }

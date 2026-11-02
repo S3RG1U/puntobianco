@@ -54,16 +54,21 @@ async function DashboardContent() {
   );
 }
 
-export default async function DashboardPage() {
+async function SampleDataBadge() {
   const { user } = await requireSession();
   const { t } = await getI18n();
   const { hasSampleData } = getDashboardData(parseRoles(user.role), t);
+  if (!hasSampleData) return null;
+  return <Badge variant="secondary">{t.dashboard.sampleData}</Badge>;
+}
+
+export default function DashboardPage() {
   return (
     <>
-      <SiteHeader title={t.nav.dashboard}>
-        {hasSampleData && (
-          <Badge variant="secondary">{t.dashboard.sampleData}</Badge>
-        )}
+      <SiteHeader title="dashboard">
+        <Suspense fallback={null}>
+          <SampleDataBadge />
+        </Suspense>
       </SiteHeader>
       <div className="flex flex-1 flex-col">
         <div className="@container/main flex flex-1 flex-col gap-2">

@@ -153,13 +153,12 @@ async function StaffContent({
   );
 }
 
-export default async function StaffPage({
+export default function StaffPage({
   searchParams,
 }: PageProps<"/staff">) {
-  const { t } = await getI18n();
   return (
     <>
-      <SiteHeader title={t.staff.title} />
+      <SiteHeader title="staff" />
       <div className="flex flex-1 flex-col gap-4 p-4 lg:p-6">
         <Suspense fallback={<Skeleton className="h-64 w-full rounded-xl" />}>
           <StaffContent searchParams={searchParams} />

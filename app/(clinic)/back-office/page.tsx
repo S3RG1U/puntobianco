@@ -11,6 +11,8 @@ import { getI18n } from "@/lib/i18n/server";
 import { SiteHeader } from "@/components/site-header";
 import { StatusBadge } from "@/components/team/status-badge";
 import { CaseAction } from "@/components/team/case-action";
+import { VisitTimelineSheet } from "@/components/patients/visit-timeline";
+import { listVisitEvents } from "@/lib/patients/visit-events";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
@@ -57,6 +59,10 @@ async function Content({
     .orderBy(asc(patientVisits.arrivalAt), asc(patientVisits.id))
     .limit(51)
     .offset((page - 1) * 50);
+  const timelines = await listVisitEvents(
+    rows.slice(0, 50).map(({ visit }) => visit.id),
+    roles,
+  );
   return (
     <div className="flex flex-col gap-5">
       <div>
@@ -117,14 +123,20 @@ async function Content({
                   </TableCell>
                   <TableCell>{assignee ?? "—"}</TableCell>
                   <TableCell>
-                    {can(roles, "backOfficeCase", "update") &&
-                      (visit.backOfficeStatus === "pending" ? (
-                        <CaseAction id={visit.id} action="start" />
-                      ) : visit.backOfficeStatus === "in_progress" &&
-                        (visit.backOfficeAssigneeId === user.id ||
-                          roles.includes("admin")) ? (
-                        <CaseAction id={visit.id} action="complete" />
-                      ) : null)}
+                    <div className="flex flex-wrap items-center gap-2">
+                      {can(roles, "backOfficeCase", "update") &&
+                        (visit.backOfficeStatus === "pending" ? (
+                          <CaseAction id={visit.id} action="start" />
+                        ) : visit.backOfficeStatus === "in_progress" &&
+                          (visit.backOfficeAssigneeId === user.id ||
+                            roles.includes("admin")) ? (
+                          <CaseAction id={visit.id} action="complete" />
+                        ) : null)}
+                      <VisitTimelineSheet
+                        patientName={`${firstName} ${lastName}`}
+                        events={timelines.get(visit.id) ?? []}
+                      />
+                    </div>
                   </TableCell>
                 </TableRow>
               ))}
@@ -173,13 +185,12 @@ async function Content({
     </div>
   );
 }
-export default async function Page(props: {
+export default function Page(props: {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
-  const { t } = await getI18n();
   return (
     <>
-      <SiteHeader title={t.backOffice.title} />
+      <SiteHeader title="backOffice" />
       <div className="p-4 lg:p-6">
         <Suspense fallback={<Skeleton className="h-80 w-full" />}>
           <Content {...props} />

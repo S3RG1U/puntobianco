@@ -13,6 +13,7 @@ import { useRouter } from "next/navigation";
 import { BellIcon } from "lucide-react";
 import { intlLocales } from "@/lib/i18n/config";
 import { useI18n } from "@/lib/i18n/client";
+import { localizeNotification } from "@/lib/i18n/dictionaries";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -47,7 +48,7 @@ export function TeamUpdates({ children }: { children: ReactNode }) {
   });
   const [online, setOnline] = useState(true);
   const router = useRouter();
-  const { t } = useI18n();
+  const { locale, t } = useI18n();
   const previous = useRef<Feed | null>(null);
   const busy = useRef(false);
   const load = useCallback(async () => {
@@ -66,8 +67,8 @@ export function TeamUpdates({ children }: { children: ReactNode }) {
         for (const event of next.events
           .filter((event) => !event.read && !seen.has(event.id))
           .slice(0, 3)) {
-          toast(event.title, {
-            description: event.message,
+          toast(localizeNotification(locale, event.title), {
+            description: localizeNotification(locale, event.message),
             action: { label: t.notifications.open, onClick: () => router.push(event.href) },
           });
           if (
@@ -75,8 +76,8 @@ export function TeamUpdates({ children }: { children: ReactNode }) {
             Notification.permission === "granted" &&
             localStorage.getItem("clinic-browser-alerts") === "on"
           ) {
-            const alert = new Notification(event.title, {
-              body: event.message,
+            const alert = new Notification(localizeNotification(locale, event.title), {
+              body: localizeNotification(locale, event.message),
               tag: event.id,
             });
             alert.onclick = () => {
@@ -97,7 +98,7 @@ export function TeamUpdates({ children }: { children: ReactNode }) {
     } finally {
       busy.current = false;
     }
-  }, [router, t]);
+  }, [locale, router, t]);
   useEffect(() => {
     const initial = setTimeout(() => void load(), 0);
     const timer = setInterval(() => {
@@ -234,10 +235,10 @@ export function NotificationBell() {
                     className="mr-2 inline-block size-2 rounded-full bg-primary"
                   />
                 )}
-                {event.title}
+                {localizeNotification(locale, event.title)}
               </span>
               <span className="text-sm text-muted-foreground">
-                {event.message}
+                {localizeNotification(locale, event.message)}
               </span>
               <time
                 className="text-xs text-muted-foreground"

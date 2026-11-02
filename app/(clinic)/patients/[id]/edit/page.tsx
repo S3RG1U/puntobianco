@@ -18,6 +18,7 @@ import {
 } from "@/lib/db/schema";
 import { getI18n } from "@/lib/i18n/server";
 import { listTreatmentCoordinators } from "@/lib/patients/coordinators";
+import { listTreatmentOptions } from "@/lib/patients/treatment-options";
 import { clinicDay, clinicTime } from "@/lib/transfers/calendar";
 export async function generateMetadata() {
   const { t } = await getI18n();
@@ -41,7 +42,7 @@ async function Content({ params }: { params: Promise<{ id: string }> }) {
     .innerJoin(users, eq(users.id, patientVisits.coordinatorId))
     .where(eq(patientVisits.id, id));
   if (!registration) notFound();
-  const [[accommodation], [transfer], active, companions] = await Promise.all([
+  const [[accommodation], [transfer], active, companions, treatments] = await Promise.all([
     db
       .select()
       .from(patientAccommodations)
@@ -62,6 +63,7 @@ async function Content({ params }: { params: Promise<{ id: string }> }) {
           isNull(patientCompanions.treatmentVisitId),
         ),
       ),
+    listTreatmentOptions(),
   ]);
   const { visit } = registration;
   // Keeps the current coordinator selectable even if they are no longer active.
@@ -75,6 +77,7 @@ async function Content({ params }: { params: Promise<{ id: string }> }) {
     <EditPatientForm
       id={id}
       coordinators={coordinators}
+      treatments={treatments}
       companions={companions}
       locked={{
         treatment: !can(roles, "treatment", "update"),
@@ -97,15 +100,14 @@ async function Content({ params }: { params: Promise<{ id: string }> }) {
     />
   );
 }
-export default async function Page({
+export default function Page({
   params,
 }: {
   params: Promise<{ id: string }>;
 }) {
-  const { t } = await getI18n();
   return (
     <>
-      <SiteHeader title={t.patients.editTitle} />
+      <SiteHeader title="editPatient" />
       <div className="mx-auto w-full max-w-4xl p-4 lg:p-6">
         <Suspense fallback={<Skeleton className="h-96 w-full" />}>
           <Content params={params} />

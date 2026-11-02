@@ -1,10 +1,12 @@
+"use client";
+
 import Link from "next/link";
 
 import { Button } from "@/components/ui/button";
-import { getI18n } from "@/lib/i18n/server";
+import { useI18n } from "@/lib/i18n/client";
 
-export default async function NotFound() {
-  const { t } = await getI18n();
+export default function NotFound() {
+  const { t } = useI18n();
 
   return (
     <main className="flex min-h-svh flex-col items-center justify-center gap-3 p-6 text-center">

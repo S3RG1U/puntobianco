@@ -1,9 +1,9 @@
 "use client";
 import { useState } from "react";
-import { format, parseISO } from "date-fns";
-import { enGB, ro } from "date-fns/locale";
+import { format } from "date-fns";
 import type { DateRange } from "react-day-picker";
 import { CalendarIcon } from "lucide-react";
+import { dateLocales, TimeSelect } from "@/components/forms/date-time-picker";
 import { Calendar } from "@/components/ui/calendar";
 import { Button } from "@/components/ui/button";
 import {
@@ -18,30 +18,17 @@ import {
   FieldError,
   FieldGroup,
 } from "@/components/ui/field";
-import { Input } from "@/components/ui/input";
 import { useI18n } from "@/lib/i18n/client";
 export function StayDateRange({
   prefix,
   errors = {},
-  defaults,
 }: {
   prefix: string;
   errors?: Record<string, string>;
-  defaults?: {
-    arrivalDate: string;
-    departureDate: string;
-    arrivalTime: string;
-    departureTime: string;
-  };
 }) {
   const { locale, t } = useI18n();
-  const dateLocale = locale === "ro" ? ro : enGB;
-  const [range, setRange] = useState<DateRange | undefined>(
-    defaults && {
-      from: parseISO(defaults.arrivalDate),
-      to: parseISO(defaults.departureDate),
-    },
-  );
+  const dateLocale = dateLocales[locale];
+  const [range, setRange] = useState<DateRange>();
   const [open, setOpen] = useState(false);
   const dateValue = (date?: Date) => (date ? format(date, "yyyy-MM-dd") : "");
   const dateError =
@@ -73,7 +60,6 @@ export function StayDateRange({
           <PopoverContent className="w-auto p-0" align="start">
             <Calendar
               mode="range"
-              defaultMonth={range?.from}
               locale={dateLocale}
               selected={range}
               onSelect={setRange}
@@ -113,27 +99,15 @@ export function StayDateRange({
       <FieldGroup className="grid gap-4 sm:grid-cols-2">
         {(
           [
-            ["arrivalTime", t.registration.arrivalTime, defaults?.arrivalTime ?? "09:00"],
-            ["departureTime", t.registration.departureTime, defaults?.departureTime ?? "18:00"],
+            ["arrivalTime", t.registration.arrivalTime, "09:00"],
+            ["departureTime", t.registration.departureTime, "18:00"],
           ] as const
         ).map(([key, label, value]) => (
           <Field key={key} data-invalid={!!errors[`${prefix}.${key}`]}>
-            <FieldLabel htmlFor={`${prefix}.${key}`}>{label}</FieldLabel>
-            <Input
-              id={`${prefix}.${key}`}
-              name={`${prefix}.${key}`}
-              type="time"
-              defaultValue={value}
-              required
-              aria-invalid={!!errors[`${prefix}.${key}`]}
-              aria-describedby={
-                errors[`${prefix}.${key}`]
-                  ? `${prefix}.${key}-error`
-                  : undefined
-              }
-            />
+            <FieldLabel>{label}</FieldLabel>
+            <TimeSelect name={`${prefix}.${key}`} defaultValue={value} />
             {errors[`${prefix}.${key}`] && (
-              <FieldError id={`${prefix}.${key}-error`}>
+              <FieldError>
                 {errors[`${prefix}.${key}`]}
               </FieldError>
             )}

@@ -37,6 +37,12 @@ export function countTransfersByWeek(
   };
 }
 
+export const transferLegApplies = (
+  booking: { direction: "one_way" | "round_trip"; oneWayLeg: TransferLeg },
+  leg: TransferLeg,
+) => booking.direction === "round_trip" || booking.oneWayLeg === leg;
+
+export type TransferLeg = "arrival" | "departure";
 export type TransferBooking = {
   id: string;
   visitId: string;
@@ -49,6 +55,8 @@ export type TransferBooking = {
 };
 export type TransferEvent = {
   id: string;
+  visitId: string;
+  pickedUp: boolean;
   title: string;
   start: string;
   leg: "arrival" | "departure";
@@ -75,8 +83,7 @@ export function transferCalendarEvents(
   });
   return bookings.flatMap((booking) =>
     (["arrival", "departure"] as const).flatMap((leg) => {
-      if (booking.direction === "one_way" && booking.oneWayLeg !== leg)
-        return [];
+      if (!transferLegApplies(booking, leg)) return [];
       const date = leg === "arrival" ? booking.arrival : booking.departure;
       if (date < start || date >= end) return [];
       // A treated companion travelling at the same time shares the parent's
@@ -105,6 +112,8 @@ export function transferCalendarEvents(
       return [
         {
           id: `${booking.id}-${leg}`,
+          visitId: booking.visitId,
+          pickedUp: false,
           title: `${leg === "arrival" ? "Sosire" : "Plecare"} ${clock.format(date)} – ${names.join(", ")}`,
           start: date.toISOString(),
           leg,

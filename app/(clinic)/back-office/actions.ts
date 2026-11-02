@@ -7,6 +7,7 @@ import { patientVisits, patients } from "@/lib/db/schema";
 import { can, parseRoles } from "@/lib/auth/permissions";
 import { requireSession } from "@/lib/auth/session";
 import { publishTeamEvent } from "@/lib/notifications/events";
+import { recordVisitEvent } from "@/lib/patients/visit-events";
 import { getI18n } from "@/lib/i18n/server";
 
 // Failures that are safe to show as they are.
@@ -55,6 +56,11 @@ export async function updateCase(id: string, action: "start" | "complete") {
               },
         )
         .where(eq(patientVisits.id, id));
+      await recordVisitEvent(tx, {
+        visitId: id,
+        type: action === "start" ? "case_started" : "case_completed",
+        actorId: user.id,
+      });
       const [patient] = await tx
         .select()
         .from(patients)

@@ -99,16 +99,25 @@ export const initialFormState: FormState = { status: "idle" };
 export function readVisit(form: FormData, prefix: string) {
   const get = (key: string) => String(form.get(`${prefix}.${key}`) ?? "");
   const checked = (key: string) => get(key) === "on";
+  // The patient's own questions use one date-time field ("2026-11-18T09:00"),
+  // a companion's visit uses separate date and time fields.
+  const part = (moment: "arrival" | "departure", kind: "Date" | "Time") =>
+    get(moment)
+      ? kind === "Date"
+        ? get(moment).slice(0, 10)
+        : get(moment).slice(11, 16)
+      : get(`${moment}${kind}`);
   return {
     firstName: get("firstName"),
     lastName: get("lastName"),
-    arrivalDate: get("arrivalDate"),
-    departureDate: get("departureDate"),
-    arrivalTime: get("arrivalTime"),
-    departureTime: get("departureTime"),
+    arrivalDate: part("arrival", "Date"),
+    departureDate: part("departure", "Date"),
+    arrivalTime: part("arrival", "Time"),
+    departureTime: part("departure", "Time"),
     coordinatorId: get("coordinatorId"),
     availabilityNotes: get("availabilityNotes"),
-    treatment: get("treatment"),
+    // Forms submit line breaks as CRLF.
+    treatment: get("treatment").replace(/\r\n/g, "\n"),
     accommodation: checked("needsAccommodation")
       ? {
           apartmentType: get("apartmentType"),

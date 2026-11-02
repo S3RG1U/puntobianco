@@ -1,6 +1,7 @@
 import localFont from "next/font/local";
 import { Suspense, type ReactNode } from "react";
 
+import { ThemeProvider } from "@/components/theme-provider";
 import { I18nProvider } from "@/lib/i18n/client";
 import { defaultLocale } from "@/lib/i18n/config";
 import { getI18n } from "@/lib/i18n/server";
@@ -34,11 +35,22 @@ async function LocaleBoundary({ children }: { children: ReactNode }) {
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
-    <html lang={defaultLocale} className={`${muller.variable} h-full antialiased`}>
+    <html
+      lang={defaultLocale}
+      className={`${muller.variable} h-full antialiased`}
+      suppressHydrationWarning
+    >
       <body className="min-h-full flex flex-col">
-        <Suspense fallback={null}>
-          <LocaleBoundary>{children}</LocaleBoundary>
-        </Suspense>
+        <ThemeProvider
+          attribute="class"
+          defaultTheme="light"
+          enableSystem
+          disableTransitionOnChange
+        >
+          <Suspense fallback={null}>
+            <LocaleBoundary>{children}</LocaleBoundary>
+          </Suspense>
+        </ThemeProvider>
       </body>
     </html>
   );

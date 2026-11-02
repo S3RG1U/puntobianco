@@ -12,21 +12,24 @@ export async function generateMetadata() {
 }
 async function Content() {
   const { user } = await requireSession();
-  if (!can(parseRoles(user.role), "transfer", "read")) redirect("/dashboard");
-  return <TransferCalendar />;
-}
-export default async function Page() {
   const { t } = await getI18n();
+  const roles = parseRoles(user.role);
+  if (!can(roles, "transfer", "read")) redirect("/dashboard");
   return (
     <>
-      <SiteHeader title={t.transfers.headerTitle} />
+      <div>
+        <h2 className="text-2xl font-semibold">{t.transfers.title}</h2>
+        <p className="text-sm text-muted-foreground">{t.transfers.subtitle}</p>
+      </div>
+      <TransferCalendar canMarkPickup={can(roles, "transfer", "update")} />
+    </>
+  );
+}
+export default function Page() {
+  return (
+    <>
+      <SiteHeader title="transfers" />
       <div className="flex flex-col gap-5 p-4 lg:p-6">
-        <div>
-          <h2 className="text-2xl font-semibold">{t.transfers.title}</h2>
-          <p className="text-sm text-muted-foreground">
-            {t.transfers.subtitle}
-          </p>
-        </div>
         <Suspense fallback={<Skeleton className="h-96 w-full" />}>
           <Content />
         </Suspense>

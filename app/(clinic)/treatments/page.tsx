@@ -101,11 +101,10 @@ async function Content() {
     </div>
   );
 }
-export default async function Page() {
-  const { t } = await getI18n();
+export default function Page() {
   return (
     <>
-      <SiteHeader title={t.treatments.title} />
+      <SiteHeader title="treatments" />
       <div className="p-4 lg:p-6">
         <Suspense fallback={<Skeleton className="h-80 w-full" />}>
           <Content />

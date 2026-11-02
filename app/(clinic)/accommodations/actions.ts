@@ -1,5 +1,6 @@
 "use server";
 import { publishTeamEvent } from "@/lib/notifications/events";
+import { recordApartmentChange } from "@/lib/patients/visit-events";
 import { eq, sql } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
@@ -132,6 +133,12 @@ export async function updateAccommodation(
           freeDays: data.freeDays,
         })
         .where(eq(patientAccommodations.id, data.id));
+      await recordApartmentChange(tx, {
+        visitId: request.visitId,
+        from: request.accommodationId,
+        to: data.accommodationId || null,
+        actorId: user.id,
+      });
       await publishTeamEvent(tx, {
         audience: "accommodation",
         title: data.accommodationId
