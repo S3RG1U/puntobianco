@@ -44,7 +44,7 @@ Open [http://localhost:3000](http://localhost:3000) with your browser to see the
 
 You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
 
-This project self-hosts Muller with `next/font/local` across body text, headings, charts, and notifications. Font files are in `public/fonts/muller`, with Thin (100), Regular (400), and ExtraBold (800) weights. Intermediate weights use browser font matching. The original Thin/ExtraBold license is included alongside the fonts.
+This project self-hosts Muller with `next/font/local` across body text, headings, charts, and notifications. Font files are in `public/fonts/muller`, using the complete Regular (400) font. Bold text is synthesized by the browser; the demo Thin/ExtraBold fonts are not loaded because their digit glyphs contain DEMO marks. The original Thin/ExtraBold license is included alongside the fonts.
 
 ## Learn More
 
@@ -60,3 +60,13 @@ You can check out [the Next.js GitHub repository](https://github.com/vercel/next
 The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
 
 Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+
+Patient registration schema: [model and field mapping](docs/patient-registration.md).
+
+## Patient and accommodation forms
+
+Use Patients → Register patient to enter a stay, treatment, optional companion, accommodation and transfer requests. A companion receiving treatment has their own complete visit details. Open a patient name in the list to review the saved registration and linked companions; treatment, accommodation and transfer details follow the viewer’s read permissions. At least one active staff member must have the Treatment coordinator role.
+
+Use Accommodation to add apartments and assign matching apartments to patient requests. Overlapping assignments and complimentary days outside the visit length are rejected.
+
+Run form validation checks with `node --import tsx --test scripts/patient-registration.test.ts`.

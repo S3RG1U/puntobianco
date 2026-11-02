@@ -28,20 +28,28 @@ export const metadata: Metadata = {
 
 const pageSize = 50;
 
-async function StaffContent({ searchParams }: Pick<PageProps<"/dashboard/staff">, "searchParams">) {
+async function StaffContent({
+  searchParams,
+}: Pick<PageProps<"/dashboard/staff">, "searchParams">) {
   const { user } = await requireSession();
   if (!can(parseRoles(user.role), "user", "list")) redirect("/dashboard");
 
   const params = await searchParams;
   const requestedPage = Number(params.page ?? 1);
-  const page = Number.isSafeInteger(requestedPage) && requestedPage > 0
-    ? requestedPage
-    : 1;
+  const page =
+    Number.isSafeInteger(requestedPage) && requestedPage > 0
+      ? requestedPage
+      : 1;
   const offset = (page - 1) * pageSize;
   if (!Number.isSafeInteger(offset)) redirect("/dashboard/staff");
 
   const { users, total } = await auth.api.listUsers({
-    query: { limit: pageSize, offset, sortBy: "createdAt", sortDirection: "asc" },
+    query: {
+      limit: pageSize,
+      offset,
+      sortBy: "createdAt",
+      sortDirection: "asc",
+    },
     headers: await headers(),
   });
 
@@ -113,17 +121,28 @@ async function StaffContent({ searchParams }: Pick<PageProps<"/dashboard/staff">
           </TableBody>
         </Table>
       </div>
-      <nav aria-label="Staff pages" className="flex items-center justify-end gap-4">
+      <nav
+        aria-label="Staff pages"
+        className="flex items-center justify-end gap-4"
+      >
         <span className="text-sm text-muted-foreground">
           Page {page} of {pageCount} · {total} staff
         </span>
         {page > 1 && (
-          <Button variant="outline" render={<Link href={`/dashboard/staff?page=${page - 1}`} />}>
+          <Button
+            nativeButton={false}
+            variant="outline"
+            render={<Link href={`/dashboard/staff?page=${page - 1}`} />}
+          >
             Previous
           </Button>
         )}
         {page < pageCount && (
-          <Button variant="outline" render={<Link href={`/dashboard/staff?page=${page + 1}`} />}>
+          <Button
+            nativeButton={false}
+            variant="outline"
+            render={<Link href={`/dashboard/staff?page=${page + 1}`} />}
+          >
             Next
           </Button>
         )}
@@ -132,7 +151,9 @@ async function StaffContent({ searchParams }: Pick<PageProps<"/dashboard/staff">
   );
 }
 
-export default function StaffPage({ searchParams }: PageProps<"/dashboard/staff">) {
+export default function StaffPage({
+  searchParams,
+}: PageProps<"/dashboard/staff">) {
   return (
     <>
       <SiteHeader title="Staff accounts" />

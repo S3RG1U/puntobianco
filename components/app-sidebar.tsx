@@ -29,15 +29,26 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { can, parseRoles, type Resource } from "@/lib/auth/permissions";
 import { requireSession } from "@/lib/auth/session";
 
-// Modules without a page yet. Each only shows to roles that can read it.
+// Each module is shown only to roles that can read it.
 const upcomingModules: {
   title: string;
   icon: typeof UsersIcon;
   resource: Resource;
+  href?: string;
 }[] = [
-  { title: "Patients", icon: UsersIcon, resource: "patient" },
+  {
+    title: "Patients",
+    icon: UsersIcon,
+    resource: "patient",
+    href: "/dashboard/patients",
+  },
   { title: "Treatments", icon: StethoscopeIcon, resource: "treatment" },
-  { title: "Accommodation", icon: BedDoubleIcon, resource: "accommodation" },
+  {
+    title: "Accommodation",
+    icon: BedDoubleIcon,
+    resource: "accommodation",
+    href: "/dashboard/accommodations",
+  },
   { title: "Transfers", icon: CarIcon, resource: "transfer" },
   { title: "Payments", icon: WalletIcon, resource: "payment" },
 ];
@@ -60,13 +71,19 @@ async function RoleNav() {
           />
         </SidebarMenuItem>
       )}
-      {modules.map(({ title, icon: Icon }) => (
+      {modules.map(({ title, icon: Icon, href }) => (
         <SidebarMenuItem key={title}>
-          <SidebarMenuButton disabled>
-            <Icon />
-            <span>{title}</span>
-          </SidebarMenuButton>
-          <SidebarMenuBadge>Soon</SidebarMenuBadge>
+          {href ? (
+            <NavLink href={href} title={title} icon={<Icon />} />
+          ) : (
+            <>
+              <SidebarMenuButton disabled>
+                <Icon />
+                <span>{title}</span>
+              </SidebarMenuButton>
+              <SidebarMenuBadge>Soon</SidebarMenuBadge>
+            </>
+          )}
         </SidebarMenuItem>
       ))}
     </>
@@ -100,11 +117,18 @@ export function AppSidebar(props: ComponentProps<typeof Sidebar>) {
           <SidebarGroupLabel>Clinic</SidebarGroupLabel>
           <SidebarMenu>
             <SidebarMenuItem>
-              <NavLink
-                href="/dashboard"
-                title="Dashboard"
-                icon={<LayoutDashboardIcon />}
-              />
+              <Suspense fallback={
+                <SidebarMenuButton render={<Link href="/dashboard" />}>
+                  <LayoutDashboardIcon />
+                  <span>Dashboard</span>
+                </SidebarMenuButton>
+              }>
+                <NavLink
+                  href="/dashboard"
+                  title="Dashboard"
+                  icon={<LayoutDashboardIcon />}
+                />
+              </Suspense>
             </SidebarMenuItem>
             <Suspense fallback={null}>
               <RoleNav />

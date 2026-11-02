@@ -20,7 +20,10 @@ export function NavLink({
 
   return (
     <SidebarMenuButton
-      isActive={pathname === href}
+      isActive={
+        pathname === href ||
+        (href !== "/dashboard" && pathname.startsWith(`${href}/`))
+      }
       tooltip={title}
       render={
         <Link href={href} onClick={() => isMobile && setOpenMobile(false)} />

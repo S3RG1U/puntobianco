@@ -82,7 +82,13 @@ const columnHelper = createColumnHelper<typeof features, DataTableRow>();
 
 const pageSizes = [10, 20, 30, 40, 50];
 
-function ResourceTable({ tab }: { tab: DataTableTab }) {
+function ResourceTable({
+  tab,
+  viewSelector,
+}: {
+  tab: DataTableTab;
+  viewSelector: React.ReactNode;
+}) {
   const columns = React.useMemo(
     () =>
       columnHelper.columns(
@@ -134,7 +140,8 @@ function ResourceTable({ tab }: { tab: DataTableTab }) {
 
   return (
     <>
-      <div className="flex justify-end">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        {viewSelector}
         <DropdownMenu>
           <DropdownMenuTrigger render={<Button variant="outline" size="sm" />}>
             <Columns3Icon data-icon="inline-start" />
@@ -150,9 +157,7 @@ function ResourceTable({ tab }: { tab: DataTableTab }) {
                   <DropdownMenuCheckboxItem
                     key={key}
                     checked={column?.getIsVisible()}
-                    onCheckedChange={(value) =>
-                      column?.toggleVisibility(value)
-                    }
+                    onCheckedChange={(value) => column?.toggleVisibility(value)}
                   >
                     {header}
                   </DropdownMenuCheckboxItem>
@@ -276,47 +281,51 @@ export function DataTable({ tabs }: { tabs: DataTableTab[] }) {
       onValueChange={setActiveTab}
       className="w-full flex-col justify-start gap-6"
     >
-      <div className="px-4 lg:px-6">
-        <Label htmlFor="view-selector" className="sr-only">
-          View
-        </Label>
-        <Select
-          value={activeTab}
-          onValueChange={(value) => value && setActiveTab(value)}
-          items={tabs.map(({ value, label }) => ({ value, label }))}
-        >
-          <SelectTrigger
-            className="flex w-fit @4xl/main:hidden"
-            size="sm"
-            id="view-selector"
-          >
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectGroup>
-              {tabs.map(({ value, label }) => (
-                <SelectItem key={value} value={value}>
-                  {label}
-                </SelectItem>
-              ))}
-            </SelectGroup>
-          </SelectContent>
-        </Select>
-        <TabsList className="hidden @4xl/main:flex">
-          {tabs.map(({ value, label }) => (
-            <TabsTrigger key={value} value={value}>
-              {label}
-            </TabsTrigger>
-          ))}
-        </TabsList>
-      </div>
       {tabs.map((tab) => (
         <TabsContent
           key={tab.value}
           value={tab.value}
           className="flex flex-col gap-4 overflow-auto px-4 lg:px-6"
         >
-          <ResourceTable tab={tab} />
+          <ResourceTable
+            tab={tab}
+            viewSelector={
+              <div className="min-w-0">
+                <Label htmlFor="view-selector" className="sr-only">
+                  View
+                </Label>
+                <Select
+                  value={activeTab}
+                  onValueChange={(value) => value && setActiveTab(value)}
+                  items={tabs.map(({ value, label }) => ({ value, label }))}
+                >
+                  <SelectTrigger
+                    className="flex w-fit @4xl/main:hidden"
+                    size="sm"
+                    id="view-selector"
+                  >
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectGroup>
+                      {tabs.map(({ value, label }) => (
+                        <SelectItem key={value} value={value}>
+                          {label}
+                        </SelectItem>
+                      ))}
+                    </SelectGroup>
+                  </SelectContent>
+                </Select>
+                <TabsList className="hidden @4xl/main:flex">
+                  {tabs.map(({ value, label }) => (
+                    <TabsTrigger key={value} value={value}>
+                      {label}
+                    </TabsTrigger>
+                  ))}
+                </TabsList>
+              </div>
+            }
+          />
         </TabsContent>
       ))}
     </Tabs>
