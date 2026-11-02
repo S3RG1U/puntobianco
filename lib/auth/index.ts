@@ -11,6 +11,9 @@ import * as schema from "../db/schema";
 import { ac, roles } from "./permissions";
 
 export const auth = betterAuth({
+  trustedOrigins: process.env.NODE_ENV === "development"
+    ? ["http://localhost:3000", "http://192.168.100.116:3000"]
+    : [],
   database: drizzleAdapter(db, { provider: "pg", schema, usePlural: true }),
   emailAndPassword: {
     enabled: true,
