@@ -10,7 +10,7 @@ Install the dependencies:
 pnpm install
 ```
 
-Copy the example environment file, then set `DATABASE_URL` in `.env` to point at your database:
+Copy the example environment file, then in `.env` set `DATABASE_URL` to point at your database and `BETTER_AUTH_SECRET` to the output of `openssl rand -base64 32`:
 
 ```bash
 cp .env.example .env
@@ -22,6 +22,12 @@ Apply the database migrations:
 pnpm db:migrate
 ```
 
+Create the first admin (`admin@puntobianco.test`), who signs in with the password from `SEED_PASSWORD` in `.env` and adds everyone else from Staff accounts:
+
+```bash
+pnpm db:seed
+```
+
 Run the development server:
 
 ```bash
@@ -30,11 +36,15 @@ pnpm dev
 
 To check the database connection, open [http://localhost:3000/api/health](http://localhost:3000/api/health). It returns `{"status":"ok"}` when the connection works.
 
+## Roles and permissions
+
+Authentication and access control use [Better Auth](https://www.better-auth.com) with its admin plugin. Roles and what they can do are defined in `lib/auth/permissions.ts`. Public sign-up is turned off, so accounts are created by an administrator.
+
 Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
 
 You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+This project self-hosts Muller with `next/font/local` across body text, headings, charts, and notifications. Font files are in `public/fonts/muller`, with Thin (100), Regular (400), and ExtraBold (800) weights. Intermediate weights use browser font matching. The original Thin/ExtraBold license is included alongside the fonts.
 
 ## Learn More
 

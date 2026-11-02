@@ -1,0 +1,112 @@
+import { createAccessControl } from "better-auth/plugins/access";
+import { adminAc, defaultStatements } from "better-auth/plugins/admin/access";
+
+// Every resource and action the app knows about. `user` and `session` come from
+// the Better Auth admin plugin. Safe to import from client and server code.
+export const statements = {
+  ...defaultStatements,
+  patient: ["create", "read", "update", "delete"],
+  treatment: ["create", "read", "update", "delete"],
+  accommodation: ["create", "read", "update", "delete"],
+  transfer: ["create", "read", "update", "delete"],
+  payment: ["create", "read", "update", "delete"],
+} as const;
+
+export type Resource = keyof typeof statements;
+
+export const ac = createAccessControl(statements);
+
+export const roles = {
+  admin: ac.newRole({
+    ...adminAc.statements,
+    patient: ["create", "read", "update", "delete"],
+    treatment: ["create", "read", "update", "delete"],
+    accommodation: ["create", "read", "update", "delete"],
+    transfer: ["create", "read", "update", "delete"],
+    payment: ["create", "read", "update", "delete"],
+  }),
+  treatmentCoordinator: ac.newRole({
+    patient: ["create", "read", "update"],
+    treatment: ["create", "read", "update"],
+    accommodation: ["read"],
+    transfer: ["read"],
+  }),
+  backOffice: ac.newRole({
+    patient: ["create", "read", "update"],
+    treatment: ["read"],
+    accommodation: ["read"],
+    transfer: ["create", "read", "update"],
+    payment: ["create", "read", "update"],
+  }),
+  accommodationManager: ac.newRole({
+    patient: ["read"],
+    accommodation: ["create", "read", "update", "delete"],
+  }),
+  driver: ac.newRole({
+    transfer: ["read", "update"],
+  }),
+  // Accountant and quality control can only view data, never change it.
+  accountant: ac.newRole({
+    patient: ["read"],
+    treatment: ["read"],
+    payment: ["read"],
+  }),
+  qualityControl: ac.newRole({
+    patient: ["read"],
+    treatment: ["read"],
+    accommodation: ["read"],
+    transfer: ["read"],
+    payment: ["read"],
+  }),
+};
+
+export type RoleName = keyof typeof roles;
+
+export const roleNames = Object.keys(roles) as [RoleName, ...RoleName[]];
+
+export const roleLabels: Record<RoleName, string> = {
+  admin: "Admin",
+  treatmentCoordinator: "Coordonator tratament",
+  backOffice: "Back office",
+  accommodationManager: "Manager cazări",
+  driver: "Șofer",
+  accountant: "Contabil",
+  qualityControl: "Control calitate",
+};
+
+export const roleDescriptions: Record<RoleName, string> = {
+  admin: "Full access, including staff accounts.",
+  treatmentCoordinator: "Manages patients and treatments.",
+  backOffice: "Manages patients, transfers and payments.",
+  accommodationManager: "Manages accommodation.",
+  driver: "Sees and updates their transfers.",
+  accountant: "View only: patients, treatments and payments.",
+  qualityControl: "View only: all clinic data.",
+};
+
+function isRoleName(role: string): role is RoleName {
+  return Object.hasOwn(roles, role);
+}
+
+// Better Auth stores multiple roles on a user as a comma-separated string.
+export function parseRoles(role: string | null | undefined): RoleName[] {
+  return (role ?? "")
+    .split(",")
+    .map((name) => name.trim())
+    .filter(isRoleName);
+}
+
+// True when any of the roles grants the action. Better Auth enforces the same
+// rules on its own endpoints; this decides what the app shows and returns.
+export function can(
+  userRoles: RoleName[],
+  resource: Resource,
+  action: string,
+): boolean {
+  return userRoles.some((roleName) => {
+    const grants: Partial<Record<Resource, readonly string[]>> =
+      roles[roleName].statements;
+
+    return grants[resource]?.includes(action) ?? false;
+  });
+}

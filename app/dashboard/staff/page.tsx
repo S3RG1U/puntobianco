@@ -1,0 +1,146 @@
+import type { Metadata } from "next";
+import Link from "next/link";
+import { headers } from "next/headers";
+import { redirect } from "next/navigation";
+import { Suspense } from "react";
+
+import { SiteHeader } from "@/components/site-header";
+import { CreateStaffDialog } from "@/components/staff/create-staff-dialog";
+import { EditRolesDialog } from "@/components/staff/edit-roles-dialog";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Skeleton } from "@/components/ui/skeleton";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { auth } from "@/lib/auth";
+import { can, parseRoles, roleLabels } from "@/lib/auth/permissions";
+import { requireSession } from "@/lib/auth/session";
+
+export const metadata: Metadata = {
+  title: "Staff accounts",
+};
+
+const pageSize = 50;
+
+async function StaffContent({ searchParams }: Pick<PageProps<"/dashboard/staff">, "searchParams">) {
+  const { user } = await requireSession();
+  if (!can(parseRoles(user.role), "user", "list")) redirect("/dashboard");
+
+  const params = await searchParams;
+  const requestedPage = Number(params.page ?? 1);
+  const page = Number.isSafeInteger(requestedPage) && requestedPage > 0
+    ? requestedPage
+    : 1;
+  const offset = (page - 1) * pageSize;
+  if (!Number.isSafeInteger(offset)) redirect("/dashboard/staff");
+
+  const { users, total } = await auth.api.listUsers({
+    query: { limit: pageSize, offset, sortBy: "createdAt", sortDirection: "asc" },
+    headers: await headers(),
+  });
+
+  const pageCount = Math.max(1, Math.ceil(total / pageSize));
+  if (page > pageCount) redirect(`/dashboard/staff?page=${pageCount}`);
+
+  return (
+    <>
+      <div className="flex flex-wrap items-center justify-between gap-4">
+        <p className="text-sm text-muted-foreground">
+          Add staff and choose which roles they have.
+        </p>
+        <CreateStaffDialog />
+      </div>
+      <div className="overflow-hidden rounded-lg border">
+        <Table>
+          <TableHeader className="bg-muted">
+            <TableRow>
+              <TableHead>Staff member</TableHead>
+              <TableHead>Roles</TableHead>
+              <TableHead>
+                <span className="sr-only">Actions</span>
+              </TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {users.map((staffMember) => {
+              const staffRoles = parseRoles(staffMember.role);
+
+              return (
+                <TableRow key={staffMember.id}>
+                  <TableCell>
+                    <div className="font-medium">
+                      {staffMember.name}
+                      {staffMember.id === user.id && (
+                        <span className="font-normal text-muted-foreground">
+                          {" "}
+                          (you)
+                        </span>
+                      )}
+                    </div>
+                    <div className="text-muted-foreground">
+                      {staffMember.email}
+                    </div>
+                  </TableCell>
+                  <TableCell>
+                    <div className="flex flex-wrap gap-1">
+                      {staffRoles.length > 0 ? (
+                        staffRoles.map((role) => (
+                          <Badge key={role} variant="secondary">
+                            {roleLabels[role]}
+                          </Badge>
+                        ))
+                      ) : (
+                        <span className="text-muted-foreground">No role</span>
+                      )}
+                    </div>
+                  </TableCell>
+                  <TableCell className="text-right">
+                    <EditRolesDialog
+                      userId={staffMember.id}
+                      userName={staffMember.name}
+                      currentRoles={staffRoles}
+                    />
+                  </TableCell>
+                </TableRow>
+              );
+            })}
+          </TableBody>
+        </Table>
+      </div>
+      <nav aria-label="Staff pages" className="flex items-center justify-end gap-4">
+        <span className="text-sm text-muted-foreground">
+          Page {page} of {pageCount} · {total} staff
+        </span>
+        {page > 1 && (
+          <Button variant="outline" render={<Link href={`/dashboard/staff?page=${page - 1}`} />}>
+            Previous
+          </Button>
+        )}
+        {page < pageCount && (
+          <Button variant="outline" render={<Link href={`/dashboard/staff?page=${page + 1}`} />}>
+            Next
+          </Button>
+        )}
+      </nav>
+    </>
+  );
+}
+
+export default function StaffPage({ searchParams }: PageProps<"/dashboard/staff">) {
+  return (
+    <>
+      <SiteHeader title="Staff accounts" />
+      <div className="flex flex-1 flex-col gap-4 p-4 lg:p-6">
+        <Suspense fallback={<Skeleton className="h-64 w-full rounded-xl" />}>
+          <StaffContent searchParams={searchParams} />
+        </Suspense>
+      </div>
+    </>
+  );
+}
