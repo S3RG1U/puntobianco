@@ -2,17 +2,33 @@ This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-
 
 ## Getting Started
 
-First, run the development server:
+You need Node.js 20.9 or newer, pnpm (`corepack enable pnpm`) and a running PostgreSQL server with an empty database.
+
+Install the dependencies:
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+pnpm install
 ```
+
+Copy the example environment file, then set `DATABASE_URL` in `.env` to point at your database:
+
+```bash
+cp .env.example .env
+```
+
+Apply the database migrations:
+
+```bash
+pnpm db:migrate
+```
+
+Run the development server:
+
+```bash
+pnpm dev
+```
+
+To check the database connection, open [http://localhost:3000/api/health](http://localhost:3000/api/health). It returns `{"status":"ok"}` when the connection works.
 
 Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
 
