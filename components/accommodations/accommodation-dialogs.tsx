@@ -10,8 +10,9 @@ import { PlusIcon } from "lucide-react";
 import {
   createApartment,
   updateAccommodation,
-} from "@/app/dashboard/accommodations/actions";
-import { apartmentOptions, initialFormState } from "@/lib/patients/form-schema";
+} from "@/app/(clinic)/accommodations/actions";
+import { useI18n } from "@/lib/i18n/client";
+import { apartmentValues, initialFormState } from "@/lib/patients/form-schema";
 import { SelectField } from "@/components/forms/select-field";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -45,11 +46,12 @@ export type AccommodationRequest = {
 };
 
 function ApartmentForm({ onSaved }: { onSaved: () => void }) {
+  const { t } = useI18n();
   const [state, action, pending] = useActionState(
     async (previous: typeof initialFormState, data: FormData) => {
       const result = await createApartment(previous, data);
       if (result.status === "success") {
-        toast.success("Apartment added.");
+        toast.success(t.accommodations.apartmentAdded);
         onSaved();
       }
       return result;
@@ -70,11 +72,13 @@ function ApartmentForm({ onSaved }: { onSaved: () => void }) {
           </Alert>
         )}
         <Field data-invalid={!!state.errors?.name}>
-          <FieldLabel htmlFor="apartment-name">Apartment name</FieldLabel>
+          <FieldLabel htmlFor="apartment-name">
+            {t.accommodations.apartmentName}
+          </FieldLabel>
           <Input
             id="apartment-name"
             name="name"
-            placeholder="For example: Parc, apartment 12"
+            placeholder={t.accommodations.apartmentNamePlaceholder}
             required
             maxLength={200}
             aria-invalid={!!state.errors?.name}
@@ -90,8 +94,11 @@ function ApartmentForm({ onSaved }: { onSaved: () => void }) {
         </Field>
         <SelectField
           name="apartmentType"
-          label="Apartment type"
-          options={apartmentOptions}
+          label={t.registration.apartmentType}
+          options={apartmentValues.map((value) => ({
+            value,
+            label: t.apartmentTypes[value],
+          }))}
           error={state.errors?.apartmentType}
         />
       </FieldGroup>
@@ -99,28 +106,30 @@ function ApartmentForm({ onSaved }: { onSaved: () => void }) {
         <DialogClose
           render={<Button type="button" variant="outline" disabled={pending} />}
         >
-          Cancel
+          {t.common.cancel}
         </DialogClose>
         <Button disabled={pending} type="submit">
-          {pending && <Spinner data-icon="inline-start" />}Add apartment
+          {pending && <Spinner data-icon="inline-start" />}
+          {t.accommodations.addApartment}
         </Button>
       </DialogFooter>
     </form>
   );
 }
 export function CreateApartmentDialog() {
+  const { t } = useI18n();
   const [open, setOpen] = useState(false);
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger render={<Button />}>
         <PlusIcon data-icon="inline-start" />
-        Add apartment
+        {t.accommodations.addApartment}
       </DialogTrigger>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Add apartment</DialogTitle>
+          <DialogTitle>{t.accommodations.addApartment}</DialogTitle>
           <DialogDescription>
-            Add a property that can be assigned to patient stays.
+            {t.accommodations.addApartmentHelp}
           </DialogDescription>
         </DialogHeader>
         <ApartmentForm onSaved={() => setOpen(false)} />
@@ -138,12 +147,13 @@ function AllocationForm({
   apartments: Apartment[];
   onSaved: () => void;
 }) {
+  const { t } = useI18n();
   const [free, setFree] = useState(request.isFree);
   const [state, action, pending] = useActionState(
     async (previous: typeof initialFormState, data: FormData) => {
       const result = await updateAccommodation(previous, data);
       if (result.status === "success") {
-        toast.success("Accommodation updated.");
+        toast.success(t.accommodations.updated);
         onSaved();
       }
       return result;
@@ -156,7 +166,7 @@ function AllocationForm({
     startTransition(() => action(data));
   }
   const options = [
-    { value: "unassigned", label: "Leave unassigned" },
+    { value: "unassigned", label: t.accommodations.leaveUnassigned },
     ...apartments
       .filter((a) => a.apartmentType === request.apartmentType)
       .map((a) => ({ value: a.id, label: a.name })),
@@ -180,7 +190,7 @@ function AllocationForm({
         )}
         <SelectField
           name="apartmentChoice"
-          label="Apartment"
+          label={t.common.apartment}
           options={options}
           defaultValue={apartmentId}
           onValueChange={setApartmentId}
@@ -194,13 +204,13 @@ function AllocationForm({
             onCheckedChange={(value) => setFree(value === true)}
           />
           <FieldLabel htmlFor={`free-${request.id}`}>
-            Include complimentary days
+            {t.accommodations.includeFreeDays}
           </FieldLabel>
         </Field>
         {free && (
           <Field data-invalid={!!state.errors?.freeDays}>
             <FieldLabel htmlFor={`days-${request.id}`}>
-              Complimentary days
+              {t.accommodations.freeDays}
             </FieldLabel>
             <Input
               id={`days-${request.id}`}
@@ -227,10 +237,11 @@ function AllocationForm({
         <DialogClose
           render={<Button type="button" variant="outline" disabled={pending} />}
         >
-          Cancel
+          {t.common.cancel}
         </DialogClose>
         <Button type="submit" disabled={pending}>
-          {pending && <Spinner data-icon="inline-start" />}Save accommodation
+          {pending && <Spinner data-icon="inline-start" />}
+          {t.accommodations.save}
         </Button>
       </DialogFooter>
     </form>
@@ -245,18 +256,19 @@ export function ManageAccommodationDialog({
   apartments: Apartment[];
   patientName: string;
 }) {
+  const { t } = useI18n();
   const [open, setOpen] = useState(false);
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger render={<Button variant="outline" size="sm" />}>
-        Manage<span className="sr-only"> accommodation for {patientName}</span>
+        {t.accommodations.manage}
+        <span className="sr-only">{t.accommodations.manageFor(patientName)}</span>
       </DialogTrigger>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Manage accommodation</DialogTitle>
+          <DialogTitle>{t.accommodations.manageTitle}</DialogTitle>
           <DialogDescription>
-            Assign an apartment and set complimentary days for {patientName}.
-            Availability is checked when you save.
+            {t.accommodations.manageHelp(patientName)}
           </DialogDescription>
         </DialogHeader>
         <AllocationForm

@@ -7,7 +7,7 @@ import { toast } from "sonner";
 import {
   updateStaffRoles,
   type StaffFormState,
-} from "@/app/dashboard/staff/actions";
+} from "@/app/(clinic)/staff/actions";
 import { RoleFields } from "@/components/staff/role-fields";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
@@ -23,6 +23,7 @@ import {
 } from "@/components/ui/dialog";
 import { Spinner } from "@/components/ui/spinner";
 import type { RoleName } from "@/lib/auth/permissions";
+import { useI18n } from "@/lib/i18n/client";
 
 function EditRolesForm({
   userId,
@@ -33,12 +34,13 @@ function EditRolesForm({
   currentRoles: RoleName[];
   onSaved: () => void;
 }) {
+  const { t } = useI18n();
   const [state, formAction, isPending] = useActionState(
     async (previous: StaffFormState, formData: FormData) => {
       const result = await updateStaffRoles(previous, formData);
 
       if (result.status === "success") {
-        toast.success("Roles updated.");
+        toast.success(t.staff.rolesUpdated);
         onSaved();
       }
 
@@ -71,10 +73,10 @@ function EditRolesForm({
         />
       </div>
       <DialogFooter>
-        <DialogClose render={<Button variant="outline" />}>Cancel</DialogClose>
+        <DialogClose render={<Button variant="outline" />}>{t.common.cancel}</DialogClose>
         <Button type="submit" disabled={isPending}>
           {isPending && <Spinner data-icon="inline-start" />}
-          Save roles
+          {t.staff.saveRoles}
         </Button>
       </DialogFooter>
     </form>
@@ -90,22 +92,21 @@ export function EditRolesDialog({
   userName: string;
   currentRoles: RoleName[];
 }) {
+  const { t } = useI18n();
   const [isOpen, setIsOpen] = useState(false);
 
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
       <DialogTrigger
         render={<Button variant="outline" size="sm" />}
-        aria-label={`Edit roles for ${userName}`}
+        aria-label={t.staff.editRolesFor(userName)}
       >
-        Edit roles
+        {t.staff.editRoles}
       </DialogTrigger>
       <DialogContent className="flex max-h-[90svh] flex-col">
         <DialogHeader>
-          <DialogTitle>Edit roles</DialogTitle>
-          <DialogDescription>
-            Choose what {userName} can access. Changes apply immediately.
-          </DialogDescription>
+          <DialogTitle>{t.staff.editRoles}</DialogTitle>
+          <DialogDescription>{t.staff.editRolesHelp(userName)}</DialogDescription>
         </DialogHeader>
         <EditRolesForm
           userId={userId}

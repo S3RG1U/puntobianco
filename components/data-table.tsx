@@ -53,11 +53,14 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useI18n } from "@/lib/i18n/client";
 
 export type DataTableColumn = {
   key: string;
   header: string;
   isStatus?: boolean;
+  // Row field to sort by when the displayed text doesn't sort naturally.
+  sortKey?: string;
 };
 
 export type DataTableRow = Record<string, string>;
@@ -89,11 +92,12 @@ function ResourceTable({
   tab: DataTableTab;
   viewSelector: React.ReactNode;
 }) {
+  const labels = useI18n().t.dashboard.table;
   const columns = React.useMemo(
     () =>
       columnHelper.columns(
-        tab.columns.map(({ key, header, isStatus }) =>
-          columnHelper.accessor((row) => row[key], {
+        tab.columns.map(({ key, header, isStatus, sortKey }) =>
+          columnHelper.accessor((row) => row[sortKey ?? key], {
             id: key,
             header: ({ column }) => (
               <Button
@@ -106,13 +110,13 @@ function ResourceTable({
                 <ArrowUpDownIcon data-icon="inline-end" />
               </Button>
             ),
-            cell: ({ getValue }) =>
+            cell: ({ row }) =>
               isStatus ? (
                 <Badge variant="outline" className="text-muted-foreground">
-                  {getValue()}
+                  {row.original[key]}
                 </Badge>
               ) : (
-                getValue()
+                row.original[key]
               ),
           }),
         ),
@@ -145,7 +149,7 @@ function ResourceTable({
         <DropdownMenu>
           <DropdownMenuTrigger render={<Button variant="outline" size="sm" />}>
             <Columns3Icon data-icon="inline-start" />
-            Columns
+            {labels.columns}
             <ChevronDownIcon data-icon="inline-end" />
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-40">
@@ -192,13 +196,23 @@ function ResourceTable({
                 )}
               </TableRow>
             ))}
+            {!tab.rows.length && (
+              <TableRow>
+                <TableCell
+                  colSpan={tab.columns.length}
+                  className="h-24 text-center text-muted-foreground"
+                >
+                  {labels.empty}
+                </TableCell>
+              </TableRow>
+            )}
           </TableBody>
         </Table>
       </div>
       <div className="flex items-center justify-end gap-8">
         <div className="hidden items-center gap-2 lg:flex">
           <Label htmlFor={`${tab.value}-rows`} className="text-sm font-medium">
-            Rows per page
+            {labels.rowsPerPage}
           </Label>
           <Select
             value={`${pagination.pageSize}`}
@@ -223,14 +237,14 @@ function ResourceTable({
           </Select>
         </div>
         <div className="text-sm font-medium">
-          Page {pagination.pageIndex + 1} of {table.getPageCount()}
+          {labels.pageOf(pagination.pageIndex + 1, table.getPageCount())}
         </div>
         <div className="flex items-center gap-2">
           <Button
             variant="outline"
             size="icon"
             className="hidden size-8 lg:flex"
-            aria-label="Go to first page"
+            aria-label={labels.firstPage}
             onClick={() => table.setPageIndex(0)}
             disabled={!table.getCanPreviousPage()}
           >
@@ -240,7 +254,7 @@ function ResourceTable({
             variant="outline"
             size="icon"
             className="size-8"
-            aria-label="Go to previous page"
+            aria-label={labels.previousPage}
             onClick={() => table.previousPage()}
             disabled={!table.getCanPreviousPage()}
           >
@@ -250,7 +264,7 @@ function ResourceTable({
             variant="outline"
             size="icon"
             className="size-8"
-            aria-label="Go to next page"
+            aria-label={labels.nextPage}
             onClick={() => table.nextPage()}
             disabled={!table.getCanNextPage()}
           >
@@ -260,7 +274,7 @@ function ResourceTable({
             variant="outline"
             size="icon"
             className="hidden size-8 lg:flex"
-            aria-label="Go to last page"
+            aria-label={labels.lastPage}
             onClick={() => table.setPageIndex(table.getPageCount() - 1)}
             disabled={!table.getCanNextPage()}
           >
@@ -273,6 +287,7 @@ function ResourceTable({
 }
 
 export function DataTable({ tabs }: { tabs: DataTableTab[] }) {
+  const { t } = useI18n();
   const [activeTab, setActiveTab] = React.useState(tabs[0]?.value);
 
   return (
@@ -292,7 +307,7 @@ export function DataTable({ tabs }: { tabs: DataTableTab[] }) {
             viewSelector={
               <div className="min-w-0">
                 <Label htmlFor="view-selector" className="sr-only">
-                  View
+                  {t.dashboard.table.view}
                 </Label>
                 <Select
                   value={activeTab}

@@ -1,5 +1,9 @@
-import type { Metadata } from "next";
 import localFont from "next/font/local";
+import { Suspense, type ReactNode } from "react";
+
+import { I18nProvider } from "@/lib/i18n/client";
+import { defaultLocale } from "@/lib/i18n/config";
+import { getI18n } from "@/lib/i18n/server";
 import "./globals.css";
 
 const muller = localFont({
@@ -14,15 +18,28 @@ const muller = localFont({
   display: "swap",
 });
 
-export const metadata: Metadata = {
-  title: { default: "Punto Bianco", template: "%s | Punto Bianco" },
-  description: "Punto Bianco clinic management",
-};
+export async function generateMetadata() {
+  const { t } = await getI18n();
+  return {
+    title: { default: "Punto Bianco", template: "%s | Punto Bianco" },
+    description: t.common.appDescription,
+  };
+}
+
+// Every page reads the language cookie, so all of it renders per request.
+async function LocaleBoundary({ children }: { children: ReactNode }) {
+  const { locale } = await getI18n();
+  return <I18nProvider locale={locale}>{children}</I18nProvider>;
+}
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
-    <html lang="en" className={`${muller.variable} h-full antialiased`}>
-      <body className="min-h-full flex flex-col">{children}</body>
+    <html lang={defaultLocale} className={`${muller.variable} h-full antialiased`}>
+      <body className="min-h-full flex flex-col">
+        <Suspense fallback={null}>
+          <LocaleBoundary>{children}</LocaleBoundary>
+        </Suspense>
+      </body>
     </html>
   );
 }

@@ -15,6 +15,20 @@
       "when": 1793619608976,
       "tag": "0001_patient_registration",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1793622001879,
+      "tag": "0002_team_workflows",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1793625403982,
+      "tag": "0003_treatments",
+      "breakpoints": true
     }
   ]
 }

@@ -65,8 +65,12 @@ Patient registration schema: [model and field mapping](docs/patient-registration
 
 ## Patient and accommodation forms
 
-Use Patients → Register patient to enter a stay, treatment, optional companion, accommodation and transfer requests. A companion receiving treatment has their own complete visit details. Open a patient name in the list to review the saved registration and linked companions; treatment, accommodation and transfer details follow the viewer’s read permissions. At least one active staff member must have the Treatment coordinator role.
+The interface is in Romanian by default; the RO/EN switch in the header stores the choice in a `locale` cookie, so URLs have no language prefix. Add text to both `lib/i18n/ro.ts` and `lib/i18n/en.ts`. Patient data, the seeded treatment catalogue (`pnpm db:seed`) and stored team notifications stay in the language they were written in.
+
+Use Patients → Register patient to enter a stay, treatment, optional companion, accommodation and transfer requests. A companion receiving treatment has their own complete visit details. Open a patient name in the list to review the saved registration and linked companions; treatment, accommodation and transfer details follow the viewer’s read permissions. At least one active staff member must have the Treatment coordinator role. Use Edit on the patient list or a registration to change its details. An assigned apartment is rechecked against the new dates, and changing the apartment type releases it. Each section only changes for roles allowed to update it: treatment for administrators and coordinators, transfers for administrators and back office, accommodation for administrators. The names of companions who only accompany are edited on the same form.
 
 Use Accommodation to add apartments and assign matching apartments to patient requests. Overlapping assignments and complimentary days outside the visit length are rejected.
 
 Run form validation checks with `node --import tsx --test scripts/patient-registration.test.ts`.
+
+Team workflow, live web notifications, driver calendar and Telegram setup: [guide](docs/team-workflows.md).

@@ -1,29 +1,23 @@
 import { z } from "zod";
 
-export const apartmentOptions = [
-  { value: "studio", label: "Studio" },
-  { value: "one_bedroom_sofa", label: "1 bedroom + sofa" },
-  { value: "two_bedrooms", label: "2 bedrooms" },
-  { value: "two_bedrooms_living", label: "2 bedrooms + living room" },
-] as const;
+// Validation messages are keys of `validation` in lib/i18n.
+
 export const apartmentValues = [
   "studio",
   "one_bedroom_sofa",
   "two_bedrooms",
   "two_bedrooms_living",
 ] as const;
-export const apartmentLabels = Object.fromEntries(
-  apartmentOptions.map(({ value, label }) => [value, label]),
-);
 const name = z
   .string()
   .trim()
-  .min(1, "Enter a name.")
-  .max(200, "Use at most 200 characters.");
-const date = z.iso.date("Choose a valid date.");
+  .min(1, "nameRequired")
+  .max(200, "nameTooLong");
+export const personNameSchema = z.object({ firstName: name, lastName: name });
+const date = z.iso.date("dateInvalid");
 const time = z
   .string()
-  .regex(/^([01]\d|2[0-3]):[0-5]\d$/, "Enter a valid time.");
+  .regex(/^([01]\d|2[0-3]):[0-5]\d$/, "timeInvalid");
 export const stayDays = (arrival: string, departure: string) =>
   Math.max(
     1,
@@ -38,16 +32,16 @@ export const visitSchema = z
     departureDate: date,
     arrivalTime: time,
     departureTime: time,
-    coordinatorId: z.string().min(1, "Choose a coordinator."),
+    coordinatorId: z.string().min(1, "coordinatorRequired"),
     availabilityNotes: z.string().trim().max(5000),
     treatment: z
       .string()
       .trim()
-      .min(1, "Describe the planned treatment.")
+      .min(1, "treatmentRequired")
       .max(10000),
     accommodation: z
       .object({
-        apartmentType: z.enum(apartmentValues, "Choose an apartment type."),
+        apartmentType: z.enum(apartmentValues, "apartmentTypeRequired"),
         isFree: z.boolean(),
         freeDays: z.coerce.number().int().min(0).max(3650),
       })
@@ -56,6 +50,7 @@ export const visitSchema = z
       .object({
         isFree: z.boolean(),
         direction: z.enum(["one_way", "round_trip"]),
+        oneWayLeg: z.enum(["arrival", "departure"]).default("arrival"),
       })
       .optional(),
   })
@@ -67,7 +62,7 @@ export const visitSchema = z
       ctx.addIssue({
         code: "custom",
         path: ["departureDate"],
-        message: "Departure must be after arrival.",
+        message: "departureAfterArrival",
       });
     }
     const accommodation = data.accommodation;
@@ -82,8 +77,7 @@ export const visitSchema = z
       ctx.addIssue({
         code: "custom",
         path: ["accommodation", "freeDays"],
-        message:
-          "Complimentary days must fit within the stay (and be zero for a paid stay).",
+        message: "freeDaysRange",
       });
     }
   });
@@ -123,7 +117,14 @@ export function readVisit(form: FormData, prefix: string) {
         }
       : undefined,
     transfer: checked("needsTransfer")
-      ? { isFree: checked("freeTransfer"), direction: get("transferDirection") }
+      ? {
+          isFree: checked("freeTransfer"),
+          direction: get("transferDirection"),
+          oneWayLeg:
+            get("transferDirection") === "one_way"
+              ? get("oneWayLeg")
+              : "arrival",
+        }
       : undefined,
   };
 }

@@ -10,8 +10,9 @@ import { users } from "@/lib/db/schema";
 // For the responsible-coordinator selector in the registration form.
 export async function listTreatmentCoordinators() {
   const { user } = await requireSession();
-  if (!can(parseRoles(user.role), "patient", "create")) {
-    throw new Error("You don't have permission to register patients.");
+  const roles = parseRoles(user.role);
+  if (!can(roles, "patient", "create") && !can(roles, "patient", "update")) {
+    throw new Error("You don't have permission to manage patients.");
   }
 
   const staff = await db

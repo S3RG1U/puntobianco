@@ -1,15 +1,17 @@
-import type { Metadata } from "next";
 import Image from "next/image";
 import { redirect } from "next/navigation";
 import { Suspense } from "react";
 
 import { BrandMark } from "@/components/brand-mark";
+import { LocaleSwitcher } from "@/components/locale-switcher";
 import { LoginForm } from "@/components/login-form";
 import { getSession } from "@/lib/auth/session";
+import { getI18n } from "@/lib/i18n/server";
 
-export const metadata: Metadata = {
-  title: "Sign in",
-};
+export async function generateMetadata() {
+  const { t } = await getI18n();
+  return { title: t.login.title };
+}
 
 async function RedirectIfSignedIn() {
   const session = await getSession();
@@ -25,11 +27,12 @@ export default function LoginPage() {
         <RedirectIfSignedIn />
       </Suspense>
       <div className="flex flex-col gap-4 p-6 md:p-10">
-        <div className="flex justify-center gap-2 md:justify-start">
+        <div className="flex items-center justify-between gap-2">
           <div className="flex items-center gap-2 font-medium">
             <BrandMark />
             Punto Bianco
           </div>
+          <LocaleSwitcher />
         </div>
         <main className="flex flex-1 items-center justify-center">
           <div className="w-full max-w-xs">
