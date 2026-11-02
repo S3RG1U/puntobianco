@@ -7,7 +7,7 @@ import { toast } from "sonner";
 import {
   createStaffMember,
   type StaffFormState,
-} from "@/app/dashboard/staff/actions";
+} from "@/app/(clinic)/staff/actions";
 import { PasswordInput } from "@/components/password-input";
 import { RoleFields } from "@/components/staff/role-fields";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -31,14 +31,16 @@ import {
 } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { Spinner } from "@/components/ui/spinner";
+import { useI18n } from "@/lib/i18n/client";
 
 function CreateStaffForm({ onCreated }: { onCreated: () => void }) {
+  const { t } = useI18n();
   const [state, formAction, isPending] = useActionState(
     async (previous: StaffFormState, formData: FormData) => {
       const result = await createStaffMember(previous, formData);
 
       if (result.status === "success") {
-        toast.success("Staff account created.");
+        toast.success(t.staff.created);
         onCreated();
       }
 
@@ -67,7 +69,7 @@ function CreateStaffForm({ onCreated }: { onCreated: () => void }) {
             </Alert>
           )}
           <Field data-invalid={Boolean(errors?.name)}>
-            <FieldLabel htmlFor="staff-name">Full name</FieldLabel>
+            <FieldLabel htmlFor="staff-name">{t.staff.fullName}</FieldLabel>
             <Input
               id="staff-name"
               name="name"
@@ -78,7 +80,7 @@ function CreateStaffForm({ onCreated }: { onCreated: () => void }) {
             <FieldError>{errors?.name?.[0]}</FieldError>
           </Field>
           <Field data-invalid={Boolean(errors?.email)}>
-            <FieldLabel htmlFor="staff-email">Email</FieldLabel>
+            <FieldLabel htmlFor="staff-email">{t.staff.email}</FieldLabel>
             <Input
               id="staff-email"
               name="email"
@@ -90,7 +92,7 @@ function CreateStaffForm({ onCreated }: { onCreated: () => void }) {
             <FieldError>{errors?.email?.[0]}</FieldError>
           </Field>
           <Field data-invalid={Boolean(errors?.password)}>
-            <FieldLabel htmlFor="staff-password">Temporary password</FieldLabel>
+            <FieldLabel htmlFor="staff-password">{t.staff.tempPassword}</FieldLabel>
             <PasswordInput
               id="staff-password"
               name="password"
@@ -99,7 +101,7 @@ function CreateStaffForm({ onCreated }: { onCreated: () => void }) {
               required
             />
             <FieldDescription>
-              At least 8 characters. Share it with them securely.
+              {t.staff.tempPasswordHelp}
             </FieldDescription>
             <FieldError>{errors?.password?.[0]}</FieldError>
           </Field>
@@ -107,10 +109,10 @@ function CreateStaffForm({ onCreated }: { onCreated: () => void }) {
         </FieldGroup>
       </div>
       <DialogFooter>
-        <DialogClose render={<Button variant="outline" />}>Cancel</DialogClose>
+        <DialogClose render={<Button variant="outline" />}>{t.common.cancel}</DialogClose>
         <Button type="submit" disabled={isPending}>
           {isPending && <Spinner data-icon="inline-start" />}
-          Create account
+          {t.staff.create}
         </Button>
       </DialogFooter>
     </form>
@@ -118,20 +120,19 @@ function CreateStaffForm({ onCreated }: { onCreated: () => void }) {
 }
 
 export function CreateStaffDialog() {
+  const { t } = useI18n();
   const [isOpen, setIsOpen] = useState(false);
 
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
       <DialogTrigger render={<Button size="sm" />}>
         <PlusIcon data-icon="inline-start" />
-        Add staff member
+        {t.staff.add}
       </DialogTrigger>
       <DialogContent className="flex max-h-[90svh] flex-col">
         <DialogHeader>
-          <DialogTitle>Add staff member</DialogTitle>
-          <DialogDescription>
-            Create their account and choose what they can access.
-          </DialogDescription>
+          <DialogTitle>{t.staff.add}</DialogTitle>
+          <DialogDescription>{t.staff.addHelp}</DialogDescription>
         </DialogHeader>
         <CreateStaffForm onCreated={() => setIsOpen(false)} />
       </DialogContent>

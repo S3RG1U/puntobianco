@@ -5,6 +5,9 @@
 @custom-variant dark (&:is(.dark *));
 
 :root {
+  --status-warning: #925c05;
+  --status-info: #1d4ed8;
+  --status-success: #147344;
   --brand: #98d3c3;
   --brand-dark: #565555;
   --background: oklch(1 0 0);
@@ -42,6 +45,9 @@
 }
 
 @theme inline {
+  --color-status-warning: var(--status-warning);
+  --color-status-info: var(--status-info);
+  --color-status-success: var(--status-success);
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-brand: var(--brand);
@@ -88,6 +94,9 @@
 }
 
 .dark {
+  --status-warning: #facc67;
+  --status-info: #93b4ff;
+  --status-success: #81d4a4;
   --background: oklch(0.145 0 0);
   --foreground: oklch(0.985 0 0);
   --card: oklch(0.205 0 0);

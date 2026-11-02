@@ -1,3 +1,5 @@
+"use client";
+
 import { Checkbox } from "@/components/ui/checkbox";
 import {
   Field,
@@ -9,12 +11,8 @@ import {
   FieldLegend,
   FieldSet,
 } from "@/components/ui/field";
-import {
-  roleDescriptions,
-  roleLabels,
-  roleNames,
-  type RoleName,
-} from "@/lib/auth/permissions";
+import { roleNames, type RoleName } from "@/lib/auth/permissions";
+import { useI18n } from "@/lib/i18n/client";
 
 export function RoleFields({
   defaultRoles = [],
@@ -23,9 +21,11 @@ export function RoleFields({
   defaultRoles?: RoleName[];
   error?: string;
 }) {
+  const { t } = useI18n();
+
   return (
     <FieldSet data-invalid={Boolean(error)}>
-      <FieldLegend variant="label">Roles</FieldLegend>
+      <FieldLegend variant="label">{t.staff.roles}</FieldLegend>
       <FieldGroup className="gap-3">
         {roleNames.map((role) => (
           <Field key={role} orientation="horizontal">
@@ -37,9 +37,9 @@ export function RoleFields({
             />
             <FieldContent>
               <FieldLabel htmlFor={`role-${role}`}>
-                {roleLabels[role]}
+                {t.roles[role].label}
               </FieldLabel>
-              <FieldDescription>{roleDescriptions[role]}</FieldDescription>
+              <FieldDescription>{t.roles[role].description}</FieldDescription>
             </FieldContent>
           </Field>
         ))}

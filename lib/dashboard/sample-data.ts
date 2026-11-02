@@ -3,8 +3,10 @@ import "server-only";
 import type { DataTableTab } from "@/components/data-table";
 import type { SectionCard } from "@/components/section-cards";
 import { can, type Resource, type RoleName } from "@/lib/auth/permissions";
+import type { Dictionary } from "@/lib/i18n/dictionaries";
 
-// Placeholder figures until these modules have real tables. Filtering happens
+// Placeholder figures until these modules are connected. Transfers already use
+// real data, see lib/dashboard/transfers.ts. Filtering happens
 // here on the server, so a role never receives data it isn't allowed to read.
 const sections: { resource: Resource; card: SectionCard; tab: DataTableTab }[] =
   [
@@ -172,117 +174,42 @@ const sections: { resource: Resource; card: SectionCard; tab: DataTableTab }[] =
         ],
       },
     },
-    {
-      resource: "transfer",
-      card: {
-        title: "Transfers this week",
-        value: "9",
-        change: "+2",
-        isUp: true,
-        summary: "Two more than last week",
-        note: "Airport and clinic trips",
-      },
-      tab: {
-        value: "transfers",
-        label: "Transfers",
-        columns: [
-          { key: "passenger", header: "Passenger" },
-          { key: "route", header: "Route" },
-          { key: "pickup", header: "Pickup" },
-          { key: "status", header: "Status", isStatus: true },
-        ],
-        rows: [
-          {
-            passenger: "Marco Ferri",
-            route: "Airport to Hotel Central",
-            pickup: "8 Nov 2026, 14:30",
-            status: "Scheduled",
-          },
-          {
-            passenger: "Hanna Berg",
-            route: "Apartament Parc to clinic",
-            pickup: "6 Nov 2026, 09:00",
-            status: "Scheduled",
-          },
-          {
-            passenger: "Giulia Rossi",
-            route: "Airport to Apartament Parc",
-            pickup: "10 Nov 2026, 11:15",
-            status: "Scheduled",
-          },
-          {
-            passenger: "Andrea Conti",
-            route: "Hotel Central to clinic",
-            pickup: "2 Nov 2026, 08:30",
-            status: "Completed",
-          },
-        ],
-      },
-    },
-    {
-      resource: "payment",
-      card: {
-        title: "Outstanding payments",
-        value: "€18,450",
-        change: "-6%",
-        isUp: false,
-        summary: "Down from last month",
-        note: "Invoices not yet paid",
-      },
-      tab: {
-        value: "payments",
-        label: "Payments",
-        columns: [
-          { key: "patient", header: "Patient" },
-          { key: "invoice", header: "Invoice" },
-          { key: "amount", header: "Amount" },
-          { key: "due", header: "Due" },
-          { key: "status", header: "Status", isStatus: true },
-        ],
-        rows: [
-          {
-            patient: "Andrea Conti",
-            invoice: "PB-1042",
-            amount: "€6,200",
-            due: "15 Nov 2026",
-            status: "Unpaid",
-          },
-          {
-            patient: "Hanna Berg",
-            invoice: "PB-1043",
-            amount: "€4,850",
-            due: "10 Nov 2026",
-            status: "Partially paid",
-          },
-          {
-            patient: "Louis Martin",
-            invoice: "PB-1039",
-            amount: "€1,300",
-            due: "20 Oct 2026",
-            status: "Paid",
-          },
-          {
-            patient: "Marco Ferri",
-            invoice: "PB-1044",
-            amount: "€7,400",
-            due: "30 Nov 2026",
-            status: "Unpaid",
-          },
-        ],
-      },
-    },
   ];
 
-export function getDashboardData(userRoles: RoleName[]) {
+function localize(value: string, t: Dictionary) {
+  const text = t.dashboard.sampleText;
+  return text[value] ?? value.replace(/\b[A-Z][a-z]{2}\b/, (m) => text[m] ?? m);
+}
+
+export function getDashboardData(userRoles: RoleName[], t: Dictionary) {
   const visible = sections.filter(({ resource }) =>
     can(userRoles, resource, "read"),
   );
 
   return {
-    cards: visible
-      .filter(({ resource }) => resource !== "payment")
-      .map(({ card }) => card),
-    tabs: visible.map(({ tab }) => tab),
+    cards: visible.map(({ card }) => ({
+      ...card,
+      title: localize(card.title, t),
+      summary: localize(card.summary, t),
+      note: localize(card.note, t),
+    })),
+    tabs: visible.map(({ tab }) => ({
+      ...tab,
+      label: localize(tab.label, t),
+      columns: tab.columns.map((column) => ({
+        ...column,
+        header: localize(column.header, t),
+      })),
+      rows: tab.rows.map((row) =>
+        Object.fromEntries(
+          Object.entries(row).map(([key, value]) => [
+            key,
+            localize(value, t),
+          ]),
+        ),
+      ),
+    })),
     showArrivals: can(userRoles, "patient", "read"),
+    hasSampleData: visible.length > 0,
   };
 }

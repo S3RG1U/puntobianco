@@ -11,8 +11,9 @@ import {
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { createPatientRegistration } from "@/app/dashboard/patients/actions";
-import { apartmentOptions, initialFormState } from "@/lib/patients/form-schema";
+import { createPatientRegistration } from "@/app/(clinic)/patients/actions";
+import { useI18n } from "@/lib/i18n/client";
+import { apartmentValues, initialFormState } from "@/lib/patients/form-schema";
 import { SelectField } from "@/components/forms/select-field";
 import { StayDateRange } from "@/components/forms/stay-date-range";
 import {
@@ -38,7 +39,21 @@ import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 
-type Coordinator = { id: string; name: string };
+export type Coordinator = { id: string; name: string };
+// Existing values when the fields are used to edit a registration.
+export type VisitDefaults = {
+  firstName: string;
+  lastName: string;
+  arrivalDate: string;
+  departureDate: string;
+  arrivalTime: string;
+  departureTime: string;
+  coordinatorId: string;
+  availabilityNotes: string;
+  treatment: string;
+  accommodation?: { apartmentType: string; isFree: boolean; freeDays: number };
+  transfer?: { isFree: boolean; direction: string; oneWayLeg: string };
+};
 function Check({
   name,
   children,
@@ -62,19 +77,22 @@ function Check({
     </Field>
   );
 }
-function NameFields({
+export function NameFields({
   prefix,
   errors,
+  defaults,
 }: {
   prefix: string;
   errors: Record<string, string>;
+  defaults?: { firstName: string; lastName: string };
 }) {
+  const { t } = useI18n();
   return (
     <FieldGroup className="grid gap-4 sm:grid-cols-2">
       {(
         [
-          ["firstName", "First name"],
-          ["lastName", "Last name"],
+          ["firstName", t.registration.firstName],
+          ["lastName", t.registration.lastName],
         ] as const
       ).map(([key, label]) => (
         <Field key={key} data-invalid={!!errors[`${prefix}.${key}`]}>
@@ -82,6 +100,7 @@ function NameFields({
           <Input
             id={`${prefix}.${key}`}
             name={`${prefix}.${key}`}
+            defaultValue={defaults?.[key]}
             required
             maxLength={200}
             autoComplete="off"
@@ -100,39 +119,54 @@ function NameFields({
     </FieldGroup>
   );
 }
-function VisitFields({
+export function VisitFields({
   prefix,
   coordinators,
   errors,
+  defaults,
+  locked,
 }: {
   prefix: string;
   coordinators: Coordinator[];
   errors: Record<string, string>;
+  defaults?: VisitDefaults;
+  // Sections this role may see but not change.
+  locked?: { treatment: boolean; accommodation: boolean; transfer: boolean };
 }) {
-  const [accommodation, setAccommodation] = useState(false);
-  const [free, setFree] = useState(false);
-  const [transfer, setTransfer] = useState(false);
-  const [freeTransfer, setFreeTransfer] = useState(false);
+  const { t } = useI18n();
+  const labels = t.registration;
+  const [accommodation, setAccommodation] = useState(!!defaults?.accommodation);
+  const [free, setFree] = useState(defaults?.accommodation?.isFree ?? false);
+  const [transfer, setTransfer] = useState(!!defaults?.transfer);
+  const [freeTransfer, setFreeTransfer] = useState(
+    defaults?.transfer?.isFree ?? false,
+  );
+  const [direction, setDirection] = useState(
+    defaults?.transfer?.direction ?? "round_trip",
+  );
   return (
     <FieldGroup>
       <FieldSet>
-        <FieldLegend>Stay and treatment</FieldLegend>
+        <FieldLegend>{labels.stayAndTreatment}</FieldLegend>
         <FieldGroup>
-          <StayDateRange prefix={prefix} errors={errors} />
+          <StayDateRange prefix={prefix} errors={errors} defaults={defaults} />
           <SelectField
             name={`${prefix}.coordinatorId`}
-            label="Responsible coordinator"
+            label={labels.responsibleCoordinator}
             options={coordinators.map((c) => ({ value: c.id, label: c.name }))}
+            defaultValue={defaults?.coordinatorId}
             error={errors[`${prefix}.coordinatorId`]}
           />
           <Field data-invalid={!!errors[`${prefix}.treatment`]}>
             <FieldLabel htmlFor={`${prefix}.treatment`}>
-              Planned treatment
+              {labels.plannedTreatment}
             </FieldLabel>
             <Textarea
               id={`${prefix}.treatment`}
               name={`${prefix}.treatment`}
-              placeholder="Describe the treatment and any relevant details"
+              defaultValue={defaults?.treatment}
+              readOnly={locked?.treatment}
+              placeholder={labels.treatmentPlaceholder}
               required
               maxLength={10000}
               aria-invalid={!!errors[`${prefix}.treatment`]}
@@ -142,6 +176,9 @@ function VisitFields({
                   : undefined
               }
             />
+            {locked?.treatment && (
+              <FieldDescription>{t.patients.lockedSection}</FieldDescription>
+            )}
             {errors[`${prefix}.treatment`] && (
               <FieldError id={`${prefix}.treatment-error`}>
                 {errors[`${prefix}.treatment`]}
@@ -150,22 +187,27 @@ function VisitFields({
           </Field>
           <Field>
             <FieldLabel htmlFor={`${prefix}.availabilityNotes`}>
-              Availability during the stay{" "}
-              <span className="text-muted-foreground">(optional)</span>
+              {labels.availability}{" "}
+              <span className="text-muted-foreground">{labels.optional}</span>
             </FieldLabel>
             <Textarea
               id={`${prefix}.availabilityNotes`}
               name={`${prefix}.availabilityNotes`}
-              placeholder="For example: available in the mornings, unavailable on Friday"
+              defaultValue={defaults?.availabilityNotes}
+              placeholder={labels.availabilityPlaceholder}
               maxLength={5000}
             />
           </Field>
         </FieldGroup>
       </FieldSet>
       <FieldSet>
-        <FieldLegend>Accommodation</FieldLegend>
+        <FieldLegend>{labels.accommodation}</FieldLegend>
+        {locked?.accommodation ? (
+          <FieldDescription>{t.patients.lockedSection}</FieldDescription>
+        ) : (
+          <>
         <FieldDescription>
-          Request accommodation now. An apartment can be assigned later.
+          {labels.accommodationHelp}
         </FieldDescription>
         <FieldGroup>
           <Check
@@ -173,14 +215,18 @@ function VisitFields({
             checked={accommodation}
             onChange={setAccommodation}
           >
-            Accommodation needed
+            {labels.accommodationNeeded}
           </Check>
           {accommodation && (
             <>
               <SelectField
                 name={`${prefix}.apartmentType`}
-                label="Apartment type"
-                options={apartmentOptions}
+                label={labels.apartmentType}
+                defaultValue={defaults?.accommodation?.apartmentType}
+                options={apartmentValues.map((value) => ({
+                  value,
+                  label: t.apartmentTypes[value],
+                }))}
                 error={errors[`${prefix}.accommodation.apartmentType`]}
               />
               <Check
@@ -188,14 +234,14 @@ function VisitFields({
                 checked={free}
                 onChange={setFree}
               >
-                Include complimentary accommodation days
+                {labels.includeFreeDays}
               </Check>
               {free && (
                 <Field
                   data-invalid={!!errors[`${prefix}.accommodation.freeDays`]}
                 >
                   <FieldLabel htmlFor={`${prefix}.freeDays`}>
-                    Number of complimentary days
+                    {labels.freeDaysCount}
                   </FieldLabel>
                   <Input
                     id={`${prefix}.freeDays`}
@@ -203,13 +249,13 @@ function VisitFields({
                     type="number"
                     min={1}
                     max={3650}
-                    defaultValue={1}
+                    defaultValue={defaults?.accommodation?.freeDays || 1}
                     required
                     aria-invalid={!!errors[`${prefix}.accommodation.freeDays`]}
                     aria-describedby={`${prefix}.freeDays-help${errors[`${prefix}.accommodation.freeDays`] ? ` ${prefix}.freeDays-error` : ""}`}
                   />
                   <FieldDescription id={`${prefix}.freeDays-help`}>
-                    Other days in the stay are paid.
+                    {labels.freeDaysHelp}
                   </FieldDescription>
                   {errors[`${prefix}.accommodation.freeDays`] && (
                     <FieldError id={`${prefix}.freeDays-error`}>
@@ -221,44 +267,63 @@ function VisitFields({
             </>
           )}
         </FieldGroup>
+          </>
+        )}
       </FieldSet>
       <FieldSet>
-        <FieldLegend>Transfers</FieldLegend>
+        <FieldLegend>{labels.transfers}</FieldLegend>
+        {locked?.transfer ? (
+          <FieldDescription>{t.patients.lockedSection}</FieldDescription>
+        ) : (
         <FieldGroup>
           <Check
             name={`${prefix}.needsTransfer`}
             checked={transfer}
             onChange={setTransfer}
           >
-            Transfer needed
+            {labels.transferNeeded}
           </Check>
           {transfer && (
             <>
               <SelectField
                 name={`${prefix}.transferDirection`}
-                label="Journey"
-                defaultValue="round_trip"
+                label={labels.journey}
+                defaultValue={direction}
+                onValueChange={setDirection}
                 options={[
-                  { value: "one_way", label: "One way" },
-                  { value: "round_trip", label: "Round trip" },
+                  { value: "one_way", label: labels.oneWay },
+                  { value: "round_trip", label: labels.roundTrip },
                 ]}
                 error={errors[`${prefix}.transfer.direction`]}
               />
+              {direction === "one_way" && (
+                <SelectField
+                  name={`${prefix}.oneWayLeg`}
+                  label={labels.leg}
+                  defaultValue={defaults?.transfer?.oneWayLeg ?? "arrival"}
+                  options={[
+                    { value: "arrival", label: t.common.arrival },
+                    { value: "departure", label: t.common.departure },
+                  ]}
+                  error={errors[`${prefix}.transfer.oneWayLeg`]}
+                />
+              )}
               <Check
                 name={`${prefix}.freeTransfer`}
                 checked={freeTransfer}
                 onChange={setFreeTransfer}
               >
-                Complimentary transfer
+                {labels.freeTransfer}
               </Check>
               <FieldDescription>
                 {freeTransfer
-                  ? "The patient will not be charged for this transfer."
-                  : "The transfer is paid."}
+                  ? labels.freeTransferHelp
+                  : labels.paidTransferHelp}
               </FieldDescription>
             </>
           )}
         </FieldGroup>
+        )}
       </FieldSet>
     </FieldGroup>
   );
@@ -269,6 +334,8 @@ export function RegistrationForm({
   coordinators: Coordinator[];
 }) {
   const router = useRouter();
+  const { t } = useI18n();
+  const labels = t.registration;
   const formRef = useRef<HTMLFormElement>(null);
   const [companion, setCompanion] = useState(false);
   const [treatment, setTreatment] = useState(false);
@@ -276,8 +343,8 @@ export function RegistrationForm({
     async (previous: typeof initialFormState, form: FormData) => {
       const result = await createPatientRegistration(previous, form);
       if (result.status === "success") {
-        toast.success("Patient registration saved.");
-        router.push("/dashboard/patients");
+        toast.success(labels.saved);
+        router.push("/patients");
         router.refresh();
       }
       return result;
@@ -311,18 +378,15 @@ export function RegistrationForm({
       {!coordinators.length && (
         <Alert>
           <AlertDescription>
-            No active treatment coordinators are available. Ask an administrator
-            to assign the Treatment coordinator role to a staff member.
+            {labels.noCoordinators}
           </AlertDescription>
         </Alert>
       )}
       <fieldset disabled={pending} className="flex min-w-0 flex-col gap-6">
         <Card>
           <CardHeader>
-            <CardTitle>Patient registration</CardTitle>
-            <CardDescription>
-              Patient details, stay arrangements and planned treatment.
-            </CardDescription>
+            <CardTitle>{labels.card}</CardTitle>
+            <CardDescription>{labels.cardHelp}</CardDescription>
           </CardHeader>
           <CardContent>
             <FieldGroup>
@@ -337,10 +401,8 @@ export function RegistrationForm({
         </Card>
         <Card>
           <CardHeader>
-            <CardTitle>Accompanying person</CardTitle>
-            <CardDescription>
-              Add a companion and, if needed, their own treatment registration.
-            </CardDescription>
+            <CardTitle>{labels.companionCard}</CardTitle>
+            <CardDescription>{labels.companionHelp}</CardDescription>
           </CardHeader>
           <CardContent>
             <FieldGroup>
@@ -349,7 +411,7 @@ export function RegistrationForm({
                 checked={companion}
                 onChange={setCompanion}
               >
-                The patient is coming with a companion
+                {labels.hasCompanion}
               </Check>
               {companion && (
                 <>
@@ -359,7 +421,7 @@ export function RegistrationForm({
                     checked={treatment}
                     onChange={setTreatment}
                   >
-                    The companion is also receiving treatment
+                    {labels.companionTreated}
                   </Check>
                   {treatment && (
                     <VisitFields
@@ -380,13 +442,13 @@ export function RegistrationForm({
           type="button"
           variant="outline"
           disabled={pending}
-          render={<Link href="/dashboard/patients" />}
+          render={<Link href="/patients" />}
         >
-          Cancel
+          {t.common.cancel}
         </Button>
         <Button type="submit" disabled={pending || !coordinators.length}>
           {pending && <Spinner data-icon="inline-start" />}
-          {pending ? "Saving registration…" : "Save registration"}
+          {pending ? labels.saving : labels.save}
         </Button>
       </div>
     </form>

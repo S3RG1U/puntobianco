@@ -1,6 +1,7 @@
 "use client";
 import { useState } from "react";
-import { format } from "date-fns";
+import { format, parseISO } from "date-fns";
+import { enGB, ro } from "date-fns/locale";
 import type { DateRange } from "react-day-picker";
 import { CalendarIcon } from "lucide-react";
 import { Calendar } from "@/components/ui/calendar";
@@ -18,14 +19,29 @@ import {
   FieldGroup,
 } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
+import { useI18n } from "@/lib/i18n/client";
 export function StayDateRange({
   prefix,
   errors = {},
+  defaults,
 }: {
   prefix: string;
   errors?: Record<string, string>;
+  defaults?: {
+    arrivalDate: string;
+    departureDate: string;
+    arrivalTime: string;
+    departureTime: string;
+  };
 }) {
-  const [range, setRange] = useState<DateRange>();
+  const { locale, t } = useI18n();
+  const dateLocale = locale === "ro" ? ro : enGB;
+  const [range, setRange] = useState<DateRange | undefined>(
+    defaults && {
+      from: parseISO(defaults.arrivalDate),
+      to: parseISO(defaults.departureDate),
+    },
+  );
   const [open, setOpen] = useState(false);
   const dateValue = (date?: Date) => (date ? format(date, "yyyy-MM-dd") : "");
   const dateError =
@@ -34,7 +50,7 @@ export function StayDateRange({
     <FieldGroup>
       <Field data-invalid={!!dateError}>
         <FieldLabel htmlFor={`${prefix}-dates`}>
-          Arrival and departure dates
+          {t.registration.dates}
         </FieldLabel>
         <Popover open={open} onOpenChange={setOpen}>
           <PopoverTrigger
@@ -51,12 +67,14 @@ export function StayDateRange({
           >
             <CalendarIcon data-icon="inline-start" />
             {range?.from
-              ? `${format(range.from, "dd MMM yyyy")} — ${range.to ? format(range.to, "dd MMM yyyy") : "Choose departure"}`
-              : "Choose stay dates"}
+              ? `${format(range.from, "dd MMM yyyy", { locale: dateLocale })} — ${range.to ? format(range.to, "dd MMM yyyy", { locale: dateLocale }) : t.registration.chooseDeparture}`
+              : t.registration.chooseDates}
           </PopoverTrigger>
           <PopoverContent className="w-auto p-0" align="start">
             <Calendar
               mode="range"
+              defaultMonth={range?.from}
+              locale={dateLocale}
               selected={range}
               onSelect={setRange}
               captionLayout="dropdown"
@@ -70,7 +88,7 @@ export function StayDateRange({
                 disabled={!range?.from || !range?.to}
                 onClick={() => setOpen(false)}
               >
-                Done
+                {t.registration.done}
               </Button>
             </div>
           </PopoverContent>
@@ -86,8 +104,7 @@ export function StayDateRange({
           value={dateValue(range?.to)}
         />
         <FieldDescription id={`${prefix}-date-help`}>
-          All dates and times use clinic time (Europe/Chisinau). Same-day visits
-          are supported.
+          {t.registration.datesHelp}
         </FieldDescription>
         {dateError && (
           <FieldError id={`${prefix}-date-error`}>{dateError}</FieldError>
@@ -96,8 +113,8 @@ export function StayDateRange({
       <FieldGroup className="grid gap-4 sm:grid-cols-2">
         {(
           [
-            ["arrivalTime", "Arrival time", "09:00"],
-            ["departureTime", "Departure time", "18:00"],
+            ["arrivalTime", t.registration.arrivalTime, defaults?.arrivalTime ?? "09:00"],
+            ["departureTime", t.registration.departureTime, defaults?.departureTime ?? "18:00"],
           ] as const
         ).map(([key, label, value]) => (
           <Field key={key} data-invalid={!!errors[`${prefix}.${key}`]}>

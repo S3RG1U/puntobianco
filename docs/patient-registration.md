@@ -26,7 +26,7 @@ Accommodation is complimentary for the recorded number of days, not necessarily 
 
 Database constraints reject blank names or treatment, departures before/equal to arrival, invalid apartment/transfer choices, inconsistent complimentary-day values, duplicate service bookings and companion treatment visits belonging to a different person. Referenced patients and coordinators cannot be deleted while visits refer to them. Deleting a visit removes its service requests and companion links, without deleting people or another patient's treatment history.
 
-The patient registration form is available at `/dashboard/patients/new`. Its server action verifies active treatment coordinators and complimentary-day limits, creates distinct patient identities for companions, and saves all records in one transaction. The patients list uses actual registrations; the overview dashboard still uses labelled sample data. `/dashboard/accommodations` lists requests and apartment inventory. Apartment assignment locks the apartment row and checks overlapping visit dates before saving. All page reads and server mutations enforce the relevant role permissions.
+The patient registration form is available at `/patients/new`. Its server action verifies active treatment coordinators and complimentary-day limits, creates distinct patient identities for companions, and saves all records in one transaction. The patients list uses actual registrations; the overview dashboard still uses labelled sample data. `/accommodations` lists requests and apartment inventory. Apartment assignment locks the apartment row and checks overlapping visit dates before saving. All page reads and server mutations enforce the relevant role permissions.
 
 ```mermaid
 erDiagram
@@ -40,7 +40,7 @@ erDiagram
     patient_visits ||--o| patient_transfers : requests
 ```
 
-Apply `drizzle/0001_patient_registration.sql` with `npm run db:migrate` (or `pnpm db:migrate`). Existing auth records are preserved.
+Apply `drizzle/0001_patient_registration.sql` with `pnpm db:migrate`. Existing auth records are preserved.
 
 Verify the database constraints with `node --env-file=.env scripts/check-patient-schema.mjs`. The check creates synthetic records inside a transaction and rolls them all back.
 

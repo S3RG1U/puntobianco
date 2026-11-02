@@ -9,6 +9,7 @@ import {
   SelectGroup,
   SelectItem,
 } from "@/components/ui/select";
+import { useI18n } from "@/lib/i18n/client";
 export function SelectField({
   name,
   label,
@@ -24,6 +25,7 @@ export function SelectField({
   defaultValue?: string;
   onValueChange?: (value: string) => void;
 }) {
+  const { t } = useI18n();
   const [value, setValue] = useState<string | null>(defaultValue ?? null);
   return (
     <Field data-invalid={!!error}>
@@ -43,7 +45,7 @@ export function SelectField({
           aria-invalid={!!error}
           aria-describedby={error ? `${name}-error` : undefined}
         >
-          <SelectValue placeholder="Choose an option" />
+          <SelectValue placeholder={t.common.chooseOption} />
         </SelectTrigger>
         <SelectContent>
           <SelectGroup>

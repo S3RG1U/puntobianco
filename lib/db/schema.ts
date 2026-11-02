@@ -115,6 +115,17 @@ export const patients = pgTable(
 );
 
 // A visit contains the registration requirements for one treatment patient.
+export const caseStatus = pgEnum("case_status", [
+  "pending",
+  "in_progress",
+  "completed",
+]);
+export const accommodationStatus = pgEnum("accommodation_status", [
+  "unprocessed",
+  "reserved",
+]);
+export const transferLeg = pgEnum("transfer_leg", ["arrival", "departure"]);
+
 export const patientVisits = pgTable(
   "patient_visits",
   {
@@ -129,6 +140,19 @@ export const patientVisits = pgTable(
     departureAt: timestamp("departure_at", { withTimezone: true }).notNull(),
     availabilityNotes: text("availability_notes").notNull().default(""),
     treatment: text("treatment").notNull(),
+    backOfficeStatus: caseStatus("back_office_status")
+      .notNull()
+      .default("pending"),
+    backOfficeAssigneeId: text("back_office_assignee_id").references(
+      () => users.id,
+      { onDelete: "set null" },
+    ),
+    backOfficeStartedAt: timestamp("back_office_started_at", {
+      withTimezone: true,
+    }),
+    backOfficeCompletedAt: timestamp("back_office_completed_at", {
+      withTimezone: true,
+    }),
     createdAt: timestamp("created_at", { withTimezone: true })
       .notNull()
       .defaultNow(),
@@ -193,6 +217,41 @@ export const accommodations = pgTable(
   ],
 );
 
+// The clinic's catalogue. Visits still describe their planned treatment as text.
+export const treatmentCategoryValues = [
+  "prevention",
+  "restorative",
+  "endodontics",
+  "surgery",
+  "implantology",
+  "prosthetics",
+  "aesthetics",
+  "orthodontics",
+  "periodontics",
+] as const;
+export const treatmentCategory = pgEnum(
+  "treatment_category",
+  treatmentCategoryValues,
+);
+
+export const treatments = pgTable(
+  "treatments",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    name: text("name").notNull().unique(),
+    category: treatmentCategory("category").notNull(),
+    description: text("description").notNull().default(""),
+    durationMinutes: integer("duration_minutes").notNull(),
+  },
+  (t) => [
+    check("treatments_name_not_empty", sql`length(trim(${t.name})) > 0`),
+    check(
+      "treatments_duration_range",
+      sql`${t.durationMinutes} BETWEEN 5 AND 600`,
+    ),
+  ],
+);
+
 // Absence of a row means no accommodation requested. freeDays records a
 // partial complimentary stay; remaining days may still be charged.
 export const patientAccommodations = pgTable(
@@ -205,6 +264,8 @@ export const patientAccommodations = pgTable(
       .references(() => patientVisits.id, { onDelete: "cascade" }),
     apartmentType: apartmentType("apartment_type").notNull(),
     accommodationId: uuid("accommodation_id"),
+    status: accommodationStatus("status").notNull().default("unprocessed"),
+    reservedAt: timestamp("reserved_at", { withTimezone: true }),
     isFree: boolean("is_free").notNull().default(false),
     freeDays: integer("free_days").notNull().default(0),
   },
@@ -232,4 +293,67 @@ export const patientTransfers = pgTable("patient_transfers", {
     .references(() => patientVisits.id, { onDelete: "cascade" }),
   isFree: boolean("is_free").notNull(),
   direction: transferDirection("direction").notNull(),
+  oneWayLeg: transferLeg("one_way_leg").notNull().default("arrival"),
 });
+
+// One durable event per audience. No treatment text is stored in alerts.
+export const teamNotifications = pgTable(
+  "team_notifications",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    audience: text("audience").notNull(),
+    title: text("title").notNull(),
+    message: text("message").notNull(),
+    href: text("href").notNull(),
+    visitId: uuid("visit_id").references(() => patientVisits.id, {
+      onDelete: "cascade",
+    }),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [
+    index("team_notifications_audience_created_idx").on(
+      t.audience,
+      t.createdAt,
+    ),
+  ],
+);
+export const notificationReads = pgTable(
+  "notification_reads",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    notificationId: uuid("notification_id")
+      .notNull()
+      .references(() => teamNotifications.id, { onDelete: "cascade" }),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+  },
+  (t) => [
+    unique("notification_reads_user_event_unique").on(
+      t.userId,
+      t.notificationId,
+    ),
+  ],
+);
+export const telegramDeliveries = pgTable(
+  "telegram_deliveries",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    notificationId: uuid("notification_id")
+      .notNull()
+      .unique()
+      .references(() => teamNotifications.id, { onDelete: "cascade" }),
+    attempts: integer("attempts").notNull().default(0),
+    availableAt: timestamp("available_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    lockedUntil: timestamp("locked_until", { withTimezone: true }),
+    deliveredAt: timestamp("delivered_at", { withTimezone: true }),
+    lastError: text("last_error"),
+  },
+  (t) => [
+    index("telegram_deliveries_due_idx").on(t.deliveredAt, t.availableAt),
+  ],
+);

@@ -1,11 +1,11 @@
 import {
   BedDoubleIcon,
   CarIcon,
+  ClipboardListIcon,
   LayoutDashboardIcon,
   ShieldCheckIcon,
   StethoscopeIcon,
   UsersIcon,
-  WalletIcon,
 } from "lucide-react";
 import Link from "next/link";
 import { Suspense, type ComponentProps } from "react";
@@ -21,71 +21,96 @@ import {
   SidebarGroupLabel,
   SidebarHeader,
   SidebarMenu,
-  SidebarMenuBadge,
   SidebarMenuButton,
   SidebarMenuItem,
 } from "@/components/ui/sidebar";
 import { Skeleton } from "@/components/ui/skeleton";
 import { can, parseRoles, type Resource } from "@/lib/auth/permissions";
 import { requireSession } from "@/lib/auth/session";
+import { getI18n } from "@/lib/i18n/server";
 
-// Each module is shown only to roles that can read it.
-const upcomingModules: {
-  title: string;
-  icon: typeof UsersIcon;
-  resource: Resource;
-  href?: string;
+// Each link is shown only to roles that can read it; empty categories disappear.
+const navGroups: {
+  label: "clinic" | "operations";
+  items: {
+    title: "patients" | "treatments" | "backOffice" | "accommodation" | "transfers";
+    icon: typeof UsersIcon;
+    resource: Resource;
+    href: string;
+  }[];
 }[] = [
   {
-    title: "Patients",
-    icon: UsersIcon,
-    resource: "patient",
-    href: "/dashboard/patients",
+    label: "clinic",
+    items: [
+      { title: "patients", icon: UsersIcon, resource: "patient", href: "/patients" },
+      {
+        title: "treatments",
+        icon: StethoscopeIcon,
+        resource: "treatment",
+        href: "/treatments",
+      },
+    ],
   },
-  { title: "Treatments", icon: StethoscopeIcon, resource: "treatment" },
   {
-    title: "Accommodation",
-    icon: BedDoubleIcon,
-    resource: "accommodation",
-    href: "/dashboard/accommodations",
+    label: "operations",
+    items: [
+      {
+        title: "backOffice",
+        icon: ClipboardListIcon,
+        resource: "backOfficeCase",
+        href: "/back-office",
+      },
+      {
+        title: "accommodation",
+        icon: BedDoubleIcon,
+        resource: "accommodation",
+        href: "/accommodations",
+      },
+      { title: "transfers", icon: CarIcon, resource: "transfer", href: "/transfers" },
+    ],
   },
-  { title: "Transfers", icon: CarIcon, resource: "transfer" },
-  { title: "Payments", icon: WalletIcon, resource: "payment" },
 ];
 
 async function RoleNav() {
   const { user } = await requireSession();
+  const { t } = await getI18n();
   const userRoles = parseRoles(user.role);
-  const modules = upcomingModules.filter(({ resource }) =>
-    can(userRoles, resource, "read"),
-  );
 
   return (
     <>
+      {navGroups.map(({ label, items }) => {
+        const visible = items.filter(({ resource }) =>
+          can(userRoles, resource, "read"),
+        );
+        if (!visible.length) return null;
+
+        return (
+          <SidebarGroup key={label}>
+            <SidebarGroupLabel>{t.nav[label]}</SidebarGroupLabel>
+            <SidebarMenu>
+              {visible.map(({ title, icon: Icon, href }) => (
+                <SidebarMenuItem key={href}>
+                  <NavLink href={href} title={t.nav[title]} icon={<Icon />} />
+                </SidebarMenuItem>
+              ))}
+            </SidebarMenu>
+          </SidebarGroup>
+        );
+      })}
       {can(userRoles, "user", "list") && (
-        <SidebarMenuItem>
-          <NavLink
-            href="/dashboard/staff"
-            title="Staff accounts"
-            icon={<ShieldCheckIcon />}
-          />
-        </SidebarMenuItem>
+        <SidebarGroup className="mt-auto">
+          <SidebarGroupLabel>{t.nav.administration}</SidebarGroupLabel>
+          <SidebarMenu>
+            <SidebarMenuItem>
+              <NavLink
+                href="/staff"
+                title={t.nav.staff}
+                icon={<ShieldCheckIcon />}
+              />
+            </SidebarMenuItem>
+          </SidebarMenu>
+        </SidebarGroup>
       )}
-      {modules.map(({ title, icon: Icon, href }) => (
-        <SidebarMenuItem key={title}>
-          {href ? (
-            <NavLink href={href} title={title} icon={<Icon />} />
-          ) : (
-            <>
-              <SidebarMenuButton disabled>
-                <Icon />
-                <span>{title}</span>
-              </SidebarMenuButton>
-              <SidebarMenuBadge>Soon</SidebarMenuBadge>
-            </>
-          )}
-        </SidebarMenuItem>
-      ))}
     </>
   );
 }
@@ -96,7 +121,9 @@ async function CurrentUser() {
   return <NavUser name={user.name} email={user.email} />;
 }
 
-export function AppSidebar(props: ComponentProps<typeof Sidebar>) {
+export async function AppSidebar(props: ComponentProps<typeof Sidebar>) {
+  const { t } = await getI18n();
+
   return (
     <Sidebar collapsible="offcanvas" {...props}>
       <SidebarHeader>
@@ -106,7 +133,7 @@ export function AppSidebar(props: ComponentProps<typeof Sidebar>) {
               <BrandMark />
               <div className="grid flex-1 text-left text-sm leading-tight">
                 <span className="truncate font-medium">Punto Bianco</span>
-                <span className="truncate text-xs">Dental clinic</span>
+                <span className="truncate text-xs">{t.nav.tagline}</span>
               </div>
             </SidebarMenuButton>
           </SidebarMenuItem>
@@ -114,27 +141,19 @@ export function AppSidebar(props: ComponentProps<typeof Sidebar>) {
       </SidebarHeader>
       <SidebarContent>
         <SidebarGroup>
-          <SidebarGroupLabel>Clinic</SidebarGroupLabel>
           <SidebarMenu>
             <SidebarMenuItem>
-              <Suspense fallback={
-                <SidebarMenuButton render={<Link href="/dashboard" />}>
-                  <LayoutDashboardIcon />
-                  <span>Dashboard</span>
-                </SidebarMenuButton>
-              }>
-                <NavLink
-                  href="/dashboard"
-                  title="Dashboard"
-                  icon={<LayoutDashboardIcon />}
-                />
-              </Suspense>
+              <NavLink
+                href="/dashboard"
+                title={t.nav.dashboard}
+                icon={<LayoutDashboardIcon />}
+              />
             </SidebarMenuItem>
-            <Suspense fallback={null}>
-              <RoleNav />
-            </Suspense>
           </SidebarMenu>
         </SidebarGroup>
+        <Suspense fallback={null}>
+          <RoleNav />
+        </Suspense>
       </SidebarContent>
       <SidebarFooter>
         <Suspense fallback={<Skeleton className="h-12 w-full" />}>

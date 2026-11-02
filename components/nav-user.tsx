@@ -20,6 +20,7 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar";
 import { authClient } from "@/lib/auth/client";
+import { useI18n } from "@/lib/i18n/client";
 
 function getInitials(name: string) {
   return name
@@ -32,6 +33,7 @@ function getInitials(name: string) {
 export function NavUser({ name, email }: { name: string; email: string }) {
   const router = useRouter();
   const { isMobile } = useSidebar();
+  const { t } = useI18n();
 
   async function handleSignOut() {
     await authClient.signOut();
@@ -86,7 +88,7 @@ export function NavUser({ name, email }: { name: string; email: string }) {
             <DropdownMenuSeparator />
             <DropdownMenuItem onClick={handleSignOut}>
               <LogOutIcon />
-              Sign out
+              {t.nav.signOut}
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>

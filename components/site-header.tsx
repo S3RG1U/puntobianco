@@ -1,5 +1,7 @@
 import type { ReactNode } from "react";
 
+import { LocaleSwitcher } from "@/components/locale-switcher";
+import { NotificationBell } from "@/components/team/team-updates";
 import { Separator } from "@/components/ui/separator";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 
@@ -19,7 +21,11 @@ export function SiteHeader({
           className="mx-2 h-4 data-vertical:self-auto"
         />
         <h1 className="text-base font-medium">{title}</h1>
-        {children && <div className="ml-auto">{children}</div>}
+        <div className="ml-auto flex items-center gap-2">
+          {children}
+          <LocaleSwitcher />
+          <NotificationBell />
+        </div>
       </div>
     </header>
   );
