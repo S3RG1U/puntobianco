@@ -11,7 +11,11 @@
     "db:migrate": "drizzle-kit migrate",
     "db:studio": "drizzle-kit studio",
     "db:seed": "tsx --conditions=react-server --env-file=.env scripts/seed.ts",
-    "notifications:worker": "tsx --conditions=react-server --env-file=.env scripts/telegram-worker.ts"
+    "notifications:worker": "tsx --conditions=react-server --env-file=.env scripts/telegram-worker.ts",
+    "api:key": "node --import tsx --conditions=react-server --env-file=.env scripts/api-key.ts",
+    "test": "node --import tsx --conditions=react-server --test scripts/*.test.ts",
+    "api:docs": "node --import tsx scripts/api-openapi.ts",
+    "test:api": "node --env-file=.env --import tsx --conditions=react-server scripts/api-integration.ts"
   },
   "dependencies": {
     "@base-ui/react": "^1.9.0",

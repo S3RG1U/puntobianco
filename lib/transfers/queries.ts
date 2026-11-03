@@ -17,6 +17,16 @@ import {
 } from "@/lib/db/schema";
 import { transferCalendarEvents } from "@/lib/transfers/calendar";
 
+export async function getVisitTransfer(visitId: string) {
+  const [booking] = await db.select({
+    id: patientTransfers.id,
+    isFree: patientTransfers.isFree,
+    direction: patientTransfers.direction,
+    oneWayLeg: patientTransfers.oneWayLeg,
+  }).from(patientTransfers).where(eq(patientTransfers.visitId, visitId)).limit(1);
+  return booking ?? null;
+}
+
 export async function listTransferEvents(
   start: Date,
   end: Date,

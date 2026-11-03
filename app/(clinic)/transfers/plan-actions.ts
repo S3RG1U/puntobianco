@@ -2,7 +2,8 @@
 
 import { and, asc, eq, inArray, sql } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
-import { can, parseRoles } from "@/lib/auth/permissions";
+import { parseRoles } from "@/lib/auth/permissions";
+import { canCurrentActor as can } from "@/lib/auth/authorization";
 import { requireSession } from "@/lib/auth/session";
 import { db } from "@/lib/db";
 import {
