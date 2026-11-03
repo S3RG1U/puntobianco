@@ -61,7 +61,7 @@ Use `POST /commands/{name}`, `Content-Type: application/json`, and an `Idempoten
 | `transfer-pickup` | `transfer:update` | `{visitId,leg: "arrival" or "departure",pickedUp: boolean}` |
 | `transfer-plan` | `transfer:update` | `{visitId,leg,expectedStart,revision,intent,reason?,moment?,pickup?,dropoff?}` |
 
-A `Visit` contains `firstName`, `lastName`, `arrivalDate`, `arrivalTime`, `departureDate`, `departureTime`, `coordinatorId`, `availabilityNotes`, `treatment`, and optionally:
+A `Visit` contains `firstName`, `lastName`, `arrivalDate`, `arrivalTime`, `departureDate`, `departureTime`, `coordinatorId`, `availabilityNotes`, `treatment`, and optionally `treatmentNotes` (left unchanged on update when omitted) and:
 
 - `accommodation: {apartmentType,isFree,freeDays}`
 - `transfer: {direction: "one_way" or "round_trip",oneWayLeg: "arrival" or "departure",isFree}`

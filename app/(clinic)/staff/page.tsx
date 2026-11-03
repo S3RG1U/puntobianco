@@ -3,6 +3,7 @@ import { ResourceTable } from "@/components/data-table";
 import { redirect } from "next/navigation";
 import { Suspense } from "react";
 
+import { PageContent } from "@/components/page-content";
 import { SiteHeader } from "@/components/site-header";
 import { CreateStaffDialog } from "@/components/staff/create-staff-dialog";
 import { EditRolesDialog } from "@/components/staff/edit-roles-dialog";
@@ -90,11 +91,11 @@ export default function StaffPage({ searchParams }: PageProps<"/staff">) {
   return (
     <>
       <SiteHeader title="staff" />
-      <div className="flex flex-1 flex-col gap-4 p-4 lg:p-6">
+      <PageContent>
         <Suspense fallback={<Skeleton className="h-64 w-full rounded-xl" />}>
           <StaffContent searchParams={searchParams} />
         </Suspense>
-      </div>
+      </PageContent>
     </>
   );
 }

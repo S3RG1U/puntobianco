@@ -24,6 +24,15 @@ export const stayDays = (arrival: string, departure: string) =>
     Math.ceil((Date.parse(departure) - Date.parse(arrival)) / 86400000),
   );
 
+const departsAfterArrival = (visit: {
+  arrivalDate: string;
+  arrivalTime: string;
+  departureDate: string;
+  departureTime: string;
+}) =>
+  `${visit.departureDate}T${visit.departureTime}` >
+  `${visit.arrivalDate}T${visit.arrivalTime}`;
+
 export const visitSchema = z
   .object({
     firstName: name,
@@ -39,6 +48,7 @@ export const visitSchema = z
       .trim()
       .min(1, "treatmentRequired")
       .max(10000),
+    treatmentNotes: z.string().trim().max(5000).optional(),
     accommodation: z
       .object({
         apartmentType: z.enum(apartmentValues, "apartmentTypeRequired"),
@@ -55,10 +65,7 @@ export const visitSchema = z
       .optional(),
   })
   .superRefine((data, ctx) => {
-    if (
-      `${data.departureDate}T${data.departureTime}` <=
-      `${data.arrivalDate}T${data.arrivalTime}`
-    ) {
+    if (!departsAfterArrival(data)) {
       ctx.addIssue({
         code: "custom",
         path: ["departureDate"],
@@ -81,11 +88,12 @@ export const visitSchema = z
       });
     }
   });
+export const companionSchema = z
+  .object({ firstName: name, lastName: name, visit: visitSchema.optional() })
+  .optional();
 export const registrationSchema = z.object({
   patient: visitSchema,
-  companion: z
-    .object({ firstName: name, lastName: name, visit: visitSchema.optional() })
-    .optional(),
+  companion: companionSchema,
 });
 export type VisitInput = z.infer<typeof visitSchema>;
 export type FormState = {
@@ -99,25 +107,21 @@ export const initialFormState: FormState = { status: "idle" };
 export function readVisit(form: FormData, prefix: string) {
   const get = (key: string) => String(form.get(`${prefix}.${key}`) ?? "");
   const checked = (key: string) => get(key) === "on";
-  // The patient's own questions use one date-time field ("2026-11-18T09:00"),
-  // a companion's visit uses separate date and time fields.
-  const part = (moment: "arrival" | "departure", kind: "Date" | "Time") =>
-    get(moment)
-      ? kind === "Date"
-        ? get(moment).slice(0, 10)
-        : get(moment).slice(11, 16)
-      : get(`${moment}${kind}`);
   return {
     firstName: get("firstName"),
     lastName: get("lastName"),
-    arrivalDate: part("arrival", "Date"),
-    departureDate: part("departure", "Date"),
-    arrivalTime: part("arrival", "Time"),
-    departureTime: part("departure", "Time"),
+    arrivalDate: get("arrivalDate"),
+    departureDate: get("departureDate"),
+    arrivalTime: get("arrivalTime"),
+    departureTime: get("departureTime"),
     coordinatorId: get("coordinatorId"),
     availabilityNotes: get("availabilityNotes"),
     // Forms submit line breaks as CRLF.
     treatment: get("treatment").replace(/\r\n/g, "\n"),
+    // Left out when not sent, so an update keeps the saved notes.
+    ...(form.has(`${prefix}.treatmentNotes`) && {
+      treatmentNotes: get("treatmentNotes").replace(/\r\n/g, "\n"),
+    }),
     accommodation: checked("needsAccommodation")
       ? {
           apartmentType: get("apartmentType"),
@@ -136,4 +140,54 @@ export function readVisit(form: FormData, prefix: string) {
         }
       : undefined,
   };
+}
+
+// A companion being added, on a new registration or on an existing one.
+export function readCompanion(form: FormData) {
+  if (form.get("hasCompanion") !== "on") return undefined;
+  const companion = {
+    firstName: String(form.get("companion.firstName") ?? ""),
+    lastName: String(form.get("companion.lastName") ?? ""),
+  };
+  return {
+    ...companion,
+    visit:
+      form.get("companionTreatment") === "on"
+        ? { ...readVisit(form, "companion.visit"), ...companion }
+        : undefined,
+  };
+}
+
+function companionsComplete(form: FormData) {
+  const saved = [...form.keys()].filter((key) =>
+    /^companions\..+\.(firstName|lastName)$/.test(key),
+  );
+  const added = readCompanion(form);
+  return (
+    (saved.length > 0 || !!added) &&
+    saved.every((key) => String(form.get(key)).trim()) &&
+    companionSchema.safeParse(added).success
+  );
+}
+
+// The form tabs that are filled in, by the same rules a save checks.
+// Optional sections only count once they are asked for.
+export function completedTabs(form: FormData) {
+  const visit = readVisit(form, "patient");
+  const invalid = (visitSchema.safeParse(visit).error?.issues ?? []).map(
+    (issue) => String(issue.path[0]),
+  );
+  const ownSection = ["treatment", "accommodation", "transfer"];
+  const tabs: string[] = [];
+  if (
+    invalid.every((field) => ownSection.includes(field)) &&
+    departsAfterArrival(visit)
+  )
+    tabs.push("overview");
+  if (!invalid.includes("treatment")) tabs.push("treatment");
+  if (visit.accommodation && !invalid.includes("accommodation"))
+    tabs.push("accommodation");
+  if (visit.transfer && !invalid.includes("transfer")) tabs.push("transfer");
+  if (companionsComplete(form)) tabs.push("companions");
+  return tabs;
 }

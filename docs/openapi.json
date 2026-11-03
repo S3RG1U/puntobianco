@@ -719,6 +719,10 @@
                         "minLength": 1,
                         "maxLength": 10000
                       },
+                      "treatmentNotes": {
+                        "type": "string",
+                        "maxLength": 5000
+                      },
                       "accommodation": {
                         "type": "object",
                         "properties": {
@@ -847,6 +851,10 @@
                             "type": "string",
                             "minLength": 1,
                             "maxLength": 10000
+                          },
+                          "treatmentNotes": {
+                            "type": "string",
+                            "maxLength": 5000
                           },
                           "accommodation": {
                             "type": "object",
@@ -1045,6 +1053,10 @@
                         "type": "string",
                         "minLength": 1,
                         "maxLength": 10000
+                      },
+                      "treatmentNotes": {
+                        "type": "string",
+                        "maxLength": 5000
                       },
                       "accommodation": {
                         "type": "object",

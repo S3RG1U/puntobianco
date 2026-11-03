@@ -3,6 +3,7 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { eq, asc } from "drizzle-orm";
 import { z } from "zod";
+import { PageContent } from "@/components/page-content";
 import { SiteHeader } from "@/components/site-header";
 import {
   ApartmentAvailability,
@@ -124,11 +125,11 @@ export default function Page(props: { params: Promise<{ id: string }> }) {
   return (
     <>
       <SiteHeader title="accommodations" />
-      <div className="p-4 lg:p-6">
+      <PageContent>
         <Suspense fallback={<Skeleton className="h-96 w-full" />}>
           <Content {...props} />
         </Suspense>
-      </div>
+      </PageContent>
     </>
   );
 }

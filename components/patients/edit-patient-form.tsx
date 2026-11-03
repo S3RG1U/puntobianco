@@ -4,17 +4,19 @@ import {
   useActionState,
   useCallback,
   useEffect,
+  useRef,
   useState,
   type FormEvent,
 } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { CircleCheckIcon } from "lucide-react";
 import { toast } from "sonner";
 import {
   createPatientRegistration,
   updatePatientVisit,
 } from "@/app/(clinic)/patients/actions";
-import { DateTimePicker } from "@/components/forms/date-time-picker";
+import { StayDateRange } from "@/components/forms/stay-date-range";
 import { SelectField } from "@/components/forms/select-field";
 import {
   TreatmentSelect,
@@ -48,7 +50,11 @@ import { Spinner } from "@/components/ui/spinner";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { useI18n } from "@/lib/i18n/client";
-import { initialFormState, type FormState } from "@/lib/patients/form-schema";
+import {
+  completedTabs,
+  initialFormState,
+  type FormState,
+} from "@/lib/patients/form-schema";
 
 type CompanionName = { patientId: string; firstName: string; lastName: string };
 
@@ -60,33 +66,29 @@ function tabOfError(key: string) {
   return "overview";
 }
 
-function Moment({
-  moment,
-  label,
+function SectionTab({
   value,
-  defaultTime,
-  error,
+  label,
+  done,
 }: {
-  moment: "arrival" | "departure";
-  label: string;
   value: string;
-  defaultTime: string;
-  error?: string;
+  label: string;
+  done: boolean;
 }) {
-  const id = `patient.${moment}`;
+  const { t } = useI18n();
   return (
-    <Field data-invalid={!!error}>
-      <FieldLabel htmlFor={id}>{label}</FieldLabel>
-      <DateTimePicker
-        id={id}
-        name={id}
-        defaultValue={value}
-        defaultTime={defaultTime}
-        invalid={!!error}
-        describedBy={error ? `${id}-error` : undefined}
-      />
-      {error && <FieldError id={`${id}-error`}>{error}</FieldError>}
-    </Field>
+    <TabsTrigger value={value}>
+      {done && (
+        <CircleCheckIcon
+          data-icon="inline-start"
+          className="text-status-success"
+        />
+      )}
+      {label}
+      {done && (
+        <span className="sr-only"> ({t.registration.sectionComplete})</span>
+      )}
+    </TabsTrigger>
   );
 }
 
@@ -97,6 +99,7 @@ type EditProps = {
   defaults: VisitDefaults;
   locked: { treatment: boolean; accommodation: boolean; transfer: boolean };
   companions: CompanionName[];
+  canAddCompanion: boolean;
   creating?: boolean;
 };
 
@@ -108,6 +111,7 @@ function EditForm({
   defaults,
   locked,
   companions,
+  canAddCompanion,
   onSaved,
   creating = false,
 }: EditProps & { onSaved: () => void }) {
@@ -132,6 +136,18 @@ function EditForm({
     initialFormState,
   );
   const errors = state.errors ?? {};
+  const formRef = useRef<HTMLFormElement>(null);
+  const [completed, setCompleted] = useState("");
+  // The fields keep their own state, and pickers open in portals whose events
+  // still reach the form. Reading the form after the update covers them all.
+  const recheck = useCallback(() => {
+    setTimeout(() => {
+      if (formRef.current)
+        setCompleted(completedTabs(new FormData(formRef.current)).join(" "));
+    });
+  }, []);
+  useEffect(recheck, [recheck]);
+  const done = (section: string) => completed.split(" ").includes(section);
   useEffect(() => {
     if (state.status !== "success") return;
     toast.success(creating ? labels.saved : t.patients.updated);
@@ -145,7 +161,16 @@ function EditForm({
     startTransition(() => action(data));
   }
   return (
-    <form noValidate onSubmit={submit} className="flex flex-col gap-4">
+    <form
+      ref={formRef}
+      noValidate
+      onSubmit={submit}
+      onChange={recheck}
+      onClick={recheck}
+      onPointerUp={recheck}
+      onKeyUp={recheck}
+      className="flex flex-col gap-4"
+    >
       <input type="hidden" name="id" value={id} />
       {locked.treatment && (
         <input
@@ -161,20 +186,38 @@ function EditForm({
       )}
       <Tabs value={tab} onValueChange={setTab} className="gap-4">
         <TabsList className="w-full justify-start overflow-x-auto overflow-y-hidden">
-          <TabsTrigger value="overview">{tabs.overview}</TabsTrigger>
+          <SectionTab
+            value="overview"
+            label={tabs.overview}
+            done={done("overview")}
+          />
           {!locked.treatment && (
-            <TabsTrigger value="treatment">{tabs.treatment}</TabsTrigger>
+            <SectionTab
+              value="treatment"
+              label={tabs.treatment}
+              done={done("treatment")}
+            />
           )}
           {!locked.accommodation && (
-            <TabsTrigger value="accommodation">
-              {tabs.accommodation}
-            </TabsTrigger>
+            <SectionTab
+              value="accommodation"
+              label={tabs.accommodation}
+              done={done("accommodation")}
+            />
           )}
           {!locked.transfer && (
-            <TabsTrigger value="transfer">{tabs.transfer}</TabsTrigger>
+            <SectionTab
+              value="transfer"
+              label={tabs.transfer}
+              done={done("transfer")}
+            />
           )}
-          {(creating || companions.length > 0) && (
-            <TabsTrigger value="companions">{tabs.companions}</TabsTrigger>
+          {(canAddCompanion || companions.length > 0) && (
+            <SectionTab
+              value="companions"
+              label={tabs.companions}
+              done={done("companions")}
+            />
           )}
         </TabsList>
         <TabsContent value="overview" keepMounted>
@@ -192,33 +235,10 @@ function EditForm({
                   errors={errors}
                   defaults={defaults}
                 />
-                <Moment
-                  moment="arrival"
-                  label={t.common.arrival}
-                  value={
-                    defaults.arrivalDate
-                      ? `${defaults.arrivalDate}T${defaults.arrivalTime}`
-                      : ""
-                  }
-                  defaultTime="09:00"
-                  error={
-                    errors["patient.arrivalDate"] ??
-                    errors["patient.arrivalTime"]
-                  }
-                />
-                <Moment
-                  moment="departure"
-                  label={t.common.departure}
-                  value={
-                    defaults.departureDate
-                      ? `${defaults.departureDate}T${defaults.departureTime}`
-                      : ""
-                  }
-                  defaultTime="18:00"
-                  error={
-                    errors["patient.departureDate"] ??
-                    errors["patient.departureTime"]
-                  }
+                <StayDateRange
+                  prefix="patient"
+                  errors={errors}
+                  defaults={defaults}
                 />
                 <SelectField
                   name="patient.coordinatorId"
@@ -257,24 +277,41 @@ function EditForm({
                 <CardDescription>{labels.treatmentHelp}</CardDescription>
               </CardHeader>
               <CardContent>
-                <Field data-invalid={!!errors["patient.treatment"]}>
-                  <FieldLabel
-                    htmlFor="patient.treatment-search"
-                    className="sr-only"
-                  >
-                    {labels.plannedTreatment}
-                  </FieldLabel>
-                  <TreatmentSelect
-                    id="patient.treatment-search"
-                    name="patient.treatment"
-                    options={treatments}
-                    defaultValue={defaults.treatment}
-                    invalid={!!errors["patient.treatment"]}
-                  />
-                  {errors["patient.treatment"] && (
-                    <FieldError>{errors["patient.treatment"]}</FieldError>
-                  )}
-                </Field>
+                <FieldGroup>
+                  <Field data-invalid={!!errors["patient.treatment"]}>
+                    <FieldLabel
+                      htmlFor="patient.treatment-search"
+                      className="sr-only"
+                    >
+                      {labels.plannedTreatment}
+                    </FieldLabel>
+                    <TreatmentSelect
+                      id="patient.treatment-search"
+                      name="patient.treatment"
+                      options={treatments}
+                      defaultValue={defaults.treatment}
+                      invalid={!!errors["patient.treatment"]}
+                    />
+                    {errors["patient.treatment"] && (
+                      <FieldError>{errors["patient.treatment"]}</FieldError>
+                    )}
+                  </Field>
+                  <Field>
+                    <FieldLabel htmlFor="patient.treatmentNotes">
+                      {labels.treatmentNotes}{" "}
+                      <span className="text-muted-foreground">
+                        {labels.optional}
+                      </span>
+                    </FieldLabel>
+                    <Textarea
+                      id="patient.treatmentNotes"
+                      name="patient.treatmentNotes"
+                      defaultValue={defaults.treatmentNotes}
+                      placeholder={labels.treatmentNotesPlaceholder}
+                      maxLength={5000}
+                    />
+                  </Field>
+                </FieldGroup>
               </CardContent>
             </Card>
           </TabsContent>
@@ -334,7 +371,7 @@ function EditForm({
             </Card>
           </TabsContent>
         )}
-        {(creating || companions.length > 0) && (
+        {(canAddCompanion || companions.length > 0) && (
           <TabsContent value="companions" keepMounted>
             <Card>
               <CardHeader>
@@ -342,7 +379,15 @@ function EditForm({
               </CardHeader>
               <CardContent>
                 <FieldGroup>
-                  {creating && (
+                  {companions.map(({ patientId, firstName, lastName }) => (
+                    <NameFields
+                      key={patientId}
+                      prefix={`companions.${patientId}`}
+                      errors={errors}
+                      defaults={{ firstName, lastName }}
+                    />
+                  ))}
+                  {canAddCompanion && (
                     <>
                       <Check
                         name="hasCompanion"
@@ -373,14 +418,6 @@ function EditForm({
                       )}
                     </>
                   )}
-                  {companions.map(({ patientId, firstName, lastName }) => (
-                    <NameFields
-                      key={patientId}
-                      prefix={`companions.${patientId}`}
-                      errors={errors}
-                      defaults={{ firstName, lastName }}
-                    />
-                  ))}
                 </FieldGroup>
               </CardContent>
             </Card>
@@ -433,6 +470,7 @@ export function RegistrationForm({
       coordinators={coordinators}
       treatments={treatments}
       companions={[]}
+      canAddCompanion
       locked={{ treatment: false, accommodation: false, transfer: false }}
       defaults={{
         firstName: "",
@@ -444,6 +482,7 @@ export function RegistrationForm({
         coordinatorId: "",
         availabilityNotes: "",
         treatment: "",
+        treatmentNotes: "",
       }}
     />
   );

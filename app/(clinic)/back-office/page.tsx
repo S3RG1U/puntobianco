@@ -10,6 +10,7 @@ import { requireSession } from "@/lib/auth/session";
 import { can, parseRoles } from "@/lib/auth/permissions";
 import { intlLocales } from "@/lib/i18n/config";
 import { getI18n } from "@/lib/i18n/server";
+import { PageContent } from "@/components/page-content";
 import { SiteHeader } from "@/components/site-header";
 import { StatusBadge } from "@/components/team/status-badge";
 import { CaseAction } from "@/components/team/case-action";
@@ -145,11 +146,11 @@ export default function Page(props: {
   return (
     <>
       <SiteHeader title="backOffice" />
-      <div className="p-4 lg:p-6">
+      <PageContent>
         <Suspense fallback={<Skeleton className="h-80 w-full" />}>
           <Content {...props} />
         </Suspense>
-      </div>
+      </PageContent>
     </>
   );
 }

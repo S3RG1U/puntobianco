@@ -5,6 +5,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { asc, desc, eq } from "drizzle-orm";
 import { PlusIcon } from "lucide-react";
+import { PageContent } from "@/components/page-content";
 import { SiteHeader } from "@/components/site-header";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -106,15 +107,17 @@ async function Content({
                         <Button
                           nativeButton={false}
                           variant="ghost"
+                          size="sm"
                           className="w-full justify-start"
                           render={<Link href={`/patients/${row.id}`} />}
                         >
-                          {t.patientDetail.title}
+                          {t.patients.manage}
                         </Button>
                         {canEdit && (
                           <Button
                             nativeButton={false}
                             variant="ghost"
+                            size="sm"
                             className="w-full justify-start"
                             render={<Link href={`/patients/${row.id}/edit`} />}
                           >
@@ -141,11 +144,11 @@ export default function Page({
   return (
     <>
       <SiteHeader title="patients" />
-      <div className="p-4 lg:p-6">
+      <PageContent>
         <Suspense fallback={<Skeleton className="h-80 w-full" />}>
           <Content searchParams={searchParams} />
         </Suspense>
-      </div>
+      </PageContent>
     </>
   );
 }

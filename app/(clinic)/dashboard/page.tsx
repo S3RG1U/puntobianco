@@ -3,6 +3,7 @@ import { Suspense } from "react";
 import { ChartAreaInteractive } from "@/components/chart-area-interactive";
 import { DataTable } from "@/components/data-table";
 import { SectionCards } from "@/components/section-cards";
+import { PageContent } from "@/components/page-content";
 import { SiteHeader } from "@/components/site-header";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
@@ -59,20 +60,23 @@ async function SampleDataBadge() {
   const { t } = await getI18n();
   const { hasSampleData } = getDashboardData(parseRoles(user.role), t);
   if (!hasSampleData) return null;
-  return <Badge variant="secondary">{t.dashboard.sampleData}</Badge>;
+  return (
+    <div className="px-4 lg:px-6">
+      <Badge variant="secondary">{t.dashboard.sampleData}</Badge>
+    </div>
+  );
 }
 
 export default function DashboardPage() {
   return (
     <>
-      <SiteHeader title="dashboard">
-        <Suspense fallback={null}>
-          <SampleDataBadge />
-        </Suspense>
-      </SiteHeader>
-      <div className="flex flex-1 flex-col">
+      <SiteHeader title="dashboard" />
+      <PageContent className="p-0">
         <div className="@container/main flex flex-1 flex-col gap-2">
           <div className="flex flex-col gap-4 py-4 md:gap-6 md:py-6">
+            <Suspense fallback={null}>
+              <SampleDataBadge />
+            </Suspense>
             <Suspense
               fallback={
                 <div className="px-4 lg:px-6">
@@ -84,7 +88,7 @@ export default function DashboardPage() {
             </Suspense>
           </div>
         </div>
-      </div>
+      </PageContent>
     </>
   );
 }

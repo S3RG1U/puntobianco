@@ -5,6 +5,7 @@ import { Suspense } from "react";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { asc, eq } from "drizzle-orm";
+import { PageContent } from "@/components/page-content";
 import { SiteHeader } from "@/components/site-header";
 import {
   CreateApartmentDialog,
@@ -183,6 +184,7 @@ async function Content({
                       <Button
                         nativeButton={false}
                         variant="ghost"
+                        size="sm"
                         className="w-full justify-start"
                         render={<Link href={`/accommodations/${a.id}`} />}
                       >
@@ -207,11 +209,11 @@ export default function Page({
   return (
     <>
       <SiteHeader title="accommodations" />
-      <div className="p-4 lg:p-6">
+      <PageContent>
         <Suspense fallback={<Skeleton className="h-80 w-full" />}>
           <Content searchParams={searchParams} />
         </Suspense>
-      </div>
+      </PageContent>
     </>
   );
 }

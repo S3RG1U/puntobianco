@@ -1,7 +1,5 @@
 "use client";
 
-import type { ReactNode } from "react";
-
 import { NotificationBell } from "@/components/team/team-updates";
 import { Separator } from "@/components/ui/separator";
 import { SidebarTrigger } from "@/components/ui/sidebar";
@@ -24,13 +22,7 @@ const titles = {
   account: (t: Dictionary) => t.account.title,
 };
 
-export function SiteHeader({
-  title,
-  children,
-}: {
-  title: keyof typeof titles;
-  children?: ReactNode;
-}) {
+export function SiteHeader({ title }: { title: keyof typeof titles }) {
   const { t } = useI18n();
 
   return (
@@ -43,7 +35,6 @@ export function SiteHeader({
         />
         <h1 className="text-base font-medium">{titles[title](t)}</h1>
         <div className="ml-auto flex items-center gap-2">
-          {children}
           <NotificationBell />
         </div>
       </div>

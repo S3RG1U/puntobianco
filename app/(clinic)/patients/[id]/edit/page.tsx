@@ -2,6 +2,7 @@ import { Suspense } from "react";
 import { notFound, redirect } from "next/navigation";
 import { and, eq, isNull } from "drizzle-orm";
 import { z } from "zod";
+import { PageContent } from "@/components/page-content";
 import { SiteHeader } from "@/components/site-header";
 import { EditPatientForm } from "@/components/patients/edit-patient-form";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -79,6 +80,7 @@ async function Content({ params }: { params: Promise<{ id: string }> }) {
       coordinators={coordinators}
       treatments={treatments}
       companions={companions}
+      canAddCompanion={can(roles, "patient", "create")}
       locked={{
         treatment: !can(roles, "treatment", "update"),
         accommodation: !can(roles, "accommodation", "update"),
@@ -94,6 +96,7 @@ async function Content({ params }: { params: Promise<{ id: string }> }) {
         coordinatorId: visit.coordinatorId,
         availabilityNotes: visit.availabilityNotes,
         treatment: visit.treatment,
+        treatmentNotes: visit.treatmentNotes,
         accommodation,
         transfer,
       }}
@@ -108,11 +111,11 @@ export default function Page({
   return (
     <>
       <SiteHeader title="editPatient" />
-      <div className="mx-auto w-full max-w-4xl p-4 lg:p-6">
+      <PageContent>
         <Suspense fallback={<Skeleton className="h-96 w-full" />}>
           <Content params={params} />
         </Suspense>
-      </div>
+      </PageContent>
     </>
   );
 }

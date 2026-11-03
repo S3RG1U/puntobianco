@@ -2,6 +2,7 @@ import "server-only";
 import { and, eq, isNull, lt, lte, or } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { teamNotifications, telegramDeliveries } from "@/lib/db/schema";
+import { telegramMessage } from "./format";
 export async function deliverTelegramBatch() {
   const token = process.env.TELEGRAM_BOT_TOKEN;
   const defaultChat = process.env.TELEGRAM_CHAT_ID;
@@ -50,7 +51,8 @@ export async function deliverTelegramBatch() {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             chat_id: defaultChat,
-            text: `${event.title}\n${event.message}${link ? `\n${link}` : ""}`,
+            text: telegramMessage(event, link),
+            parse_mode: "HTML",
             link_preview_options: { is_disabled: true },
           }),
           signal: AbortSignal.timeout(15000),

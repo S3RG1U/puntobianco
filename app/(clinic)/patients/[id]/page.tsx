@@ -4,6 +4,7 @@ import { notFound, redirect } from "next/navigation";
 import { eq } from "drizzle-orm";
 import { z } from "zod";
 import { VisitTimeline } from "@/components/patients/visit-timeline";
+import { PageContent } from "@/components/page-content";
 import { SiteHeader } from "@/components/site-header";
 import {
   Card,
@@ -110,7 +111,7 @@ async function Content({ params }: { params: Promise<{ id: string }> }) {
   const accommodation = accommodationRows[0];
   const transfer = transferRows[0];
   return (
-    <div className="mx-auto flex w-full max-w-4xl flex-col gap-6">
+    <div className="flex flex-col gap-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h2 className="text-2xl font-semibold">
@@ -191,10 +192,20 @@ async function Content({ params }: { params: Promise<{ id: string }> }) {
           <CardHeader>
             <CardTitle>{labels.plannedTreatment}</CardTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent className="flex flex-col gap-4">
             <p className="whitespace-pre-wrap break-words">
               {registration.visit.treatment}
             </p>
+            {registration.visit.treatmentNotes && (
+              <div>
+                <p className="text-sm text-muted-foreground">
+                  {t.registration.treatmentNotes}
+                </p>
+                <p className="whitespace-pre-wrap break-words">
+                  {registration.visit.treatmentNotes}
+                </p>
+              </div>
+            )}
           </CardContent>
         </Card>
           </TabsContent>
@@ -347,11 +358,11 @@ export default function Page({
   return (
     <>
       <SiteHeader title="patientDetail" />
-      <div className="p-4 lg:p-6">
+      <PageContent>
         <Suspense fallback={<Skeleton className="h-80 w-full" />}>
           <Content params={params} />
         </Suspense>
-      </div>
+      </PageContent>
     </>
   );
 }

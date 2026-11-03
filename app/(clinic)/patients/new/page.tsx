@@ -1,5 +1,6 @@
 import { Suspense } from "react";
 import { redirect } from "next/navigation";
+import { PageContent } from "@/components/page-content";
 import { SiteHeader } from "@/components/site-header";
 import { RegistrationForm } from "@/components/patients/edit-patient-form";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -26,11 +27,11 @@ export default function Page() {
   return (
     <>
       <SiteHeader title="registerPatient" />
-      <div className="mx-auto w-full max-w-4xl p-4 lg:p-6">
+      <PageContent>
         <Suspense fallback={<Skeleton className="h-96 w-full" />}>
           <Content />
         </Suspense>
-      </div>
+      </PageContent>
     </>
   );
 }

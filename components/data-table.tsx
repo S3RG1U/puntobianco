@@ -25,6 +25,7 @@ import {
   Columns3Icon,
   EllipsisIcon,
 } from "lucide-react";
+import { cn } from "cn";
 import * as React from "react";
 
 import { Card, CardContent } from "@/components/ui/card";
@@ -253,7 +254,11 @@ export function ResourceTable({
             {table.getHeaderGroups().map((headerGroup) => (
               <TableRow key={headerGroup.id}>
                 {headerGroup.headers.map((header) => (
-                  <TableHead key={header.id} colSpan={header.colSpan}>
+                  <TableHead
+                    key={header.id}
+                    colSpan={header.colSpan}
+                    className={cn(header.column.id === "actions" && "w-px")}
+                  >
                     <FlexRender header={header} />
                   </TableHead>
                 ))}
@@ -265,7 +270,12 @@ export function ResourceTable({
               <TableRow key={row.id}>
                 {row.getAllCells().map((cell) =>
                   cell.column.getIsVisible() ? (
-                    <TableCell key={cell.id}>
+                    <TableCell
+                      key={cell.id}
+                      className={cn(
+                        cell.column.id === "actions" && "w-px text-right",
+                      )}
+                    >
                       <FlexRender cell={cell} />
                     </TableCell>
                   ) : null,

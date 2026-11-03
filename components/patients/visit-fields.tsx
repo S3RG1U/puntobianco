@@ -33,6 +33,7 @@ export type VisitDefaults = {
   coordinatorId: string;
   availabilityNotes: string;
   treatment: string;
+  treatmentNotes: string;
   accommodation?: { apartmentType: string; isFree: boolean; freeDays: number };
   transfer?: { isFree: boolean; direction: string; oneWayLeg: string };
 };
@@ -146,6 +147,18 @@ function CareFields({
             {errors[`${prefix}.treatment`]}
           </FieldError>
         )}
+      </Field>
+      <Field>
+        <FieldLabel htmlFor={`${prefix}.treatmentNotes`}>
+          {labels.treatmentNotes}{" "}
+          <span className="text-muted-foreground">{labels.optional}</span>
+        </FieldLabel>
+        <Textarea
+          id={`${prefix}.treatmentNotes`}
+          name={`${prefix}.treatmentNotes`}
+          placeholder={labels.treatmentNotesPlaceholder}
+          maxLength={5000}
+        />
       </Field>
       <Field>
         <FieldLabel htmlFor={`${prefix}.availabilityNotes`}>

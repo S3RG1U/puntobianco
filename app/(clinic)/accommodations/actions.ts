@@ -1,5 +1,7 @@
 "use server";
 import { publishTeamEvent } from "@/lib/notifications/events";
+import { formatFreeDays, formatStay } from "@/lib/notifications/format";
+import { clinicDay } from "@/lib/transfers/calendar";
 import { recordApartmentChange } from "@/lib/patients/visit-events";
 import { eq, sql } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
@@ -12,6 +14,7 @@ import { db } from "@/lib/db";
 import {
   accommodations,
   patientAccommodations,
+  patients,
   patientVisits,
 } from "@/lib/db/schema";
 import { apartmentValues, type FormState } from "@/lib/patients/form-schema";
@@ -100,15 +103,19 @@ export async function updateAccommodation(
       if (!request) throw new AccommodationError(errors.requestGone);
       const [visit] = await tx
         .select({
+          firstName: patients.firstName,
+          lastName: patients.lastName,
           arrival: patientVisits.arrivalAt,
           departure: patientVisits.departureAt,
           days: sql<number>`greatest(1, ((${patientVisits.departureAt} AT TIME ZONE 'Europe/Chisinau')::date - (${patientVisits.arrivalAt} AT TIME ZONE 'Europe/Chisinau')::date))`,
         })
         .from(patientVisits)
+        .innerJoin(patients, eq(patients.id, patientVisits.patientId))
         .where(eq(patientVisits.id, request.visitId));
       if (!visit) throw new AccommodationError(errors.visitGone);
       if (data.isFree && (data.freeDays < 1 || data.freeDays > visit.days))
         throw new AccommodationError(errors.freeDaysRange(visit.days));
+      let apartmentName: string | undefined;
       if (data.accommodationId) {
         // Serialize assignments to an apartment so concurrent requests cannot
         // both pass the overlap check before either commits.
@@ -119,6 +126,7 @@ export async function updateAccommodation(
           .for("update");
         if (!apartment || apartment.apartmentType !== request.apartmentType)
           throw new AccommodationError(errors.typeMismatch);
+        apartmentName = apartment.name;
         if (
           await apartmentHasConflict(tx, data.accommodationId, data.id, visit)
         )
@@ -140,15 +148,29 @@ export async function updateAccommodation(
         to: data.accommodationId || null,
         actorId: user.id,
       });
-      await publishTeamEvent(tx, {
-        audience: "accommodation",
-        title: data.accommodationId
-          ? "Cazare · Rezervat"
-          : "Cazare · Neprelucrat",
-        message: "Cererea de cazare a fost actualizată.",
-        href: "/accommodations",
-        visitId: request.visitId,
-      });
+      if (
+        request.accommodationId !== (data.accommodationId || null) ||
+        request.isFree !== data.isFree ||
+        request.freeDays !== data.freeDays
+      )
+        await publishTeamEvent(
+          tx,
+          {
+            audience: "accommodation",
+            title: data.accommodationId
+              ? "Cazare · Rezervat"
+              : "Cazare · Neprelucrat",
+            message: [
+              `${visit.firstName} ${visit.lastName}`,
+              apartmentName ? `Apartament ${apartmentName}` : "Fără apartament",
+              formatStay(clinicDay(visit.arrival), clinicDay(visit.departure)),
+              ...(data.isFree ? [formatFreeDays(data.freeDays)] : []),
+            ].join(" · "),
+            href: "/accommodations",
+            visitId: request.visitId,
+          },
+          true,
+        );
     });
   } catch (error) {
     const message =

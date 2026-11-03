@@ -21,6 +21,7 @@ import {
   type TransferPlanInput,
 } from "@/lib/transfers/plan-schema";
 import { publishTeamEvent } from "@/lib/notifications/events";
+import { formatInstant } from "@/lib/notifications/format";
 
 class PlanError extends Error {}
 export async function updateTransferPlan(
@@ -149,14 +150,28 @@ export async function updateTransferPlan(
           actorId: user.id,
         });
       }
+      const rescheduled =
+        data.intent === "reschedule" &&
+        scheduledAt.getTime() !== start.getTime();
       for (const audience of ["transfer", "backOfficeCase"] as const)
-        await publishTeamEvent(tx, {
-          audience,
-          title: "Transfer actualizat",
-          message: `${current.names.join(", ")} · ${t.transfers.legs[data.leg]}`,
-          href: "/transfers",
-          visitId: data.visitId,
-        });
+        await publishTeamEvent(
+          tx,
+          {
+            audience,
+            title: "Transfer actualizat",
+            message: [
+              current.names.join(", "),
+              t.transfers.legs[data.leg],
+              ...(rescheduled
+                ? [`${formatInstant(start)} → ${formatInstant(scheduledAt)}`]
+                : []),
+            ].join(" · "),
+            href: "/transfers",
+            visitId: data.visitId,
+          },
+          // One Telegram message, though both teams see it in the app.
+          rescheduled && audience === "transfer",
+        );
     });
   } catch (error) {
     return {

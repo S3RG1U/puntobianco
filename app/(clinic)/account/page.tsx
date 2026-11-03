@@ -1,5 +1,6 @@
 import { Suspense } from "react";
 import { AccountSettings } from "@/components/account/account-settings";
+import { PageContent } from "@/components/page-content";
 import { SiteHeader } from "@/components/site-header";
 import { Skeleton } from "@/components/ui/skeleton";
 import { requireSession } from "@/lib/auth/session";
@@ -16,11 +17,11 @@ export default function Page() {
   return (
     <>
       <SiteHeader title="account" />
-      <div className="mx-auto w-full max-w-2xl p-4 lg:p-6">
+      <PageContent>
         <Suspense fallback={<Skeleton className="h-96 w-full" />}>
           <Content />
         </Suspense>
-      </div>
+      </PageContent>
     </>
   );
 }

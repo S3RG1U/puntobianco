@@ -25,6 +25,9 @@ const notificationText: Record<string, string> = {
   "Cerere cazare": "Accommodation request",
   Cazare: "Accommodation",
   Actualizată: "Updated",
+  Anulată: "Cancelled",
+  "Date modificate": "Dates changed",
+  "Fără apartament": "No apartment",
   Neprelucrat: "Unprocessed",
   Rezervat: "Reserved",
   "Transfer nou": "New transfer",
@@ -41,7 +44,10 @@ export function localizeNotification(locale: Locale, text: string) {
     .map(
       (part) =>
         notificationText[part] ??
-        part.replace(/^Sosire /, "Arrival ").replace(/^Plecare /, "Departure "),
+        part
+          .replace(/^Sosire /, "Arrival ")
+          .replace(/^Plecare /, "Departure ")
+          .replace(/^Apartament /, "Apartment "),
     )
     .join(" · ");
 }

@@ -44,7 +44,7 @@ Telegram is disabled by default and no messages are sent without configuration.
 
 The worker claims queued messages with leases, honors Telegram retry-after responses, and retries up to eight attempts with increasing delays. It never delays the patient's registration. Failed jobs remain in `telegram_deliveries` with a sanitized error for investigation. Run the worker under your deployment's process supervisor so it restarts after crashes. Delivery is at least once: a crash after Telegram accepts a message but before the database records success may cause a duplicate.
 
-Only registrations made while `TELEGRAM_ENABLED=true` enqueue external messages; enabling Telegram later does not send all old registrations. All configured team alerts go to the configured group. Messages include patient names and logistical dates but never treatment text. Links require the normal app sign-in and role checks. Bot credentials stay on the server; do not commit `.env`.
+Registrations, changed stay dates, rescheduled transfers and accommodation changes made while `TELEGRAM_ENABLED=true` enqueue external messages; enabling Telegram later does not send older events. All configured team alerts go to the configured group. Messages include patient names and logistical dates but never treatment text. Links require the normal app sign-in and role checks. Bot credentials stay on the server; do not commit `.env`.
 
 Official API: https://core.telegram.org/bots/api#sendmessage
 

@@ -141,6 +141,7 @@ export const patientVisits = pgTable(
     departureAt: timestamp("departure_at", { withTimezone: true }).notNull(),
     availabilityNotes: text("availability_notes").notNull().default(""),
     treatment: text("treatment").notNull(),
+    treatmentNotes: text("treatment_notes").notNull().default(""),
     backOfficeStatus: caseStatus("back_office_status")
       .notNull()
       .default("pending"),

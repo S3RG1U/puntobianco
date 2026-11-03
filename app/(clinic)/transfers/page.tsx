@@ -1,5 +1,6 @@
 import { Suspense } from "react";
 import { redirect } from "next/navigation";
+import { PageContent } from "@/components/page-content";
 import { SiteHeader } from "@/components/site-header";
 import { Skeleton } from "@/components/ui/skeleton";
 import { TransferCalendar } from "@/components/team/transfer-calendar";
@@ -29,11 +30,11 @@ export default function Page() {
   return (
     <>
       <SiteHeader title="transfers" />
-      <div className="flex flex-col gap-5 p-4 lg:p-6">
+      <PageContent className="gap-5">
         <Suspense fallback={<Skeleton className="h-96 w-full" />}>
           <Content />
         </Suspense>
-      </div>
+      </PageContent>
     </>
   );
 }

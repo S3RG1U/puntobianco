@@ -1,0 +1,1 @@
+ALTER TABLE "patient_visits" ADD COLUMN "treatment_notes" text DEFAULT '' NOT NULL;

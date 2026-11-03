@@ -2,6 +2,12 @@
 
 import { publishTeamEvent } from "@/lib/notifications/events";
 import {
+  formatFreeDays,
+  formatInstant,
+  formatMoment,
+  formatStay,
+} from "@/lib/notifications/format";
+import {
   recordApartmentChange,
   recordVisitEvent,
 } from "@/lib/patients/visit-events";
@@ -25,6 +31,8 @@ import {
   users,
 } from "@/lib/db/schema";
 import {
+  companionSchema,
+  readCompanion,
   readVisit,
   registrationSchema,
   personNameSchema,
@@ -34,6 +42,7 @@ import {
   type VisitInput,
 } from "@/lib/patients/form-schema";
 import { fieldErrors } from "@/lib/i18n/dictionaries";
+import { ro } from "@/lib/i18n/ro";
 import { getI18n } from "@/lib/i18n/server";
 
 const localTimestamp = (date: string, time: string) =>
@@ -60,6 +69,121 @@ async function requireActiveCoordinator(
     throw new PatientError(message);
 }
 
+async function createVisit(
+  tx: Transaction,
+  data: VisitInput,
+  patientId: string,
+  actorId: string,
+  coordinatorUnavailable: string,
+) {
+  await requireActiveCoordinator(
+    tx,
+    data.coordinatorId,
+    coordinatorUnavailable,
+  );
+  const [visit] = await tx
+    .insert(patientVisits)
+    .values({
+      patientId,
+      coordinatorId: data.coordinatorId,
+      arrivalAt: localTimestamp(data.arrivalDate, data.arrivalTime),
+      departureAt: localTimestamp(data.departureDate, data.departureTime),
+      availabilityNotes: data.availabilityNotes,
+      treatment: data.treatment,
+      treatmentNotes: data.treatmentNotes,
+    })
+    .returning({ id: patientVisits.id });
+  await recordVisitEvent(tx, {
+    visitId: visit.id,
+    type: "registered",
+    actorId,
+  });
+  if (data.accommodation)
+    await tx
+      .insert(patientAccommodations)
+      .values({ visitId: visit.id, ...data.accommodation });
+  if (data.transfer)
+    await tx
+      .insert(patientTransfers)
+      .values({ visitId: visit.id, ...data.transfer });
+  const name = `${data.firstName} ${data.lastName}`;
+  await publishTeamEvent(tx, {
+    audience: "patient",
+    title: "Pacient înregistrat",
+    message: name,
+    href: `/patients/${visit.id}`,
+    visitId: visit.id,
+  });
+  await publishTeamEvent(
+    tx,
+    {
+      audience: "backOfficeCase",
+      title: "Caz nou · Back office",
+      message: `${name} · Sosire ${formatMoment(data.arrivalDate, data.arrivalTime)}`,
+      href: "/back-office",
+      visitId: visit.id,
+    },
+    true,
+  );
+  if (data.accommodation)
+    await publishTeamEvent(
+      tx,
+      {
+        audience: "accommodation",
+        title: "Cerere cazare · Neprelucrat",
+        message: [
+          name,
+          ro.apartmentTypes[data.accommodation.apartmentType],
+          formatStay(data.arrivalDate, data.departureDate),
+          ...(data.accommodation.isFree
+            ? [formatFreeDays(data.accommodation.freeDays)]
+            : []),
+        ].join(" · "),
+        href: "/accommodations",
+        visitId: visit.id,
+      },
+      true,
+    );
+  if (data.transfer)
+    await publishTeamEvent(
+      tx,
+      {
+        audience: "transfer",
+        title: "Transfer nou",
+        message: `${name} · ${data.transfer.direction === "round_trip" ? "Sosire și plecare" : data.transfer.oneWayLeg === "departure" ? "Plecare" : "Sosire"}`,
+        href: "/transfers",
+        visitId: visit.id,
+      },
+      true,
+    );
+  return visit.id;
+}
+
+async function addCompanion(
+  tx: Transaction,
+  visitId: string,
+  data: NonNullable<z.output<typeof companionSchema>>,
+  actorId: string,
+  coordinatorUnavailable: string,
+) {
+  const [companion] = await tx
+    .insert(patients)
+    .values({ firstName: data.firstName, lastName: data.lastName })
+    .returning({ id: patients.id });
+  const treatmentVisitId = data.visit
+    ? await createVisit(
+        tx,
+        data.visit,
+        companion.id,
+        actorId,
+        coordinatorUnavailable,
+      )
+    : null;
+  await tx
+    .insert(patientCompanions)
+    .values({ visitId, patientId: companion.id, treatmentVisitId });
+}
+
 export async function createPatientRegistration(
   _previous: FormState,
   form: FormData,
@@ -71,22 +195,9 @@ export async function createPatientRegistration(
       status: "error",
       message: t.patients.errors.permission,
     };
-  const companionName = {
-    firstName: String(form.get("companion.firstName") ?? ""),
-    lastName: String(form.get("companion.lastName") ?? ""),
-  };
   const parsed = registrationSchema.safeParse({
     patient: readVisit(form, "patient"),
-    companion:
-      form.get("hasCompanion") === "on"
-        ? {
-            ...companionName,
-            visit:
-              form.get("companionTreatment") === "on"
-                ? { ...readVisit(form, "companion.visit"), ...companionName }
-                : undefined,
-          }
-        : undefined,
+    companion: readCompanion(form),
   });
   if (!parsed.success)
     return {
@@ -97,81 +208,6 @@ export async function createPatientRegistration(
 
   try {
     const id = await db.transaction(async (tx) => {
-      async function createVisit(data: VisitInput, patientId: string) {
-        await requireActiveCoordinator(
-          tx,
-          data.coordinatorId,
-          t.patients.errors.coordinatorUnavailable,
-        );
-        const [visit] = await tx
-          .insert(patientVisits)
-          .values({
-            patientId,
-            coordinatorId: data.coordinatorId,
-            arrivalAt: localTimestamp(data.arrivalDate, data.arrivalTime),
-            departureAt: localTimestamp(data.departureDate, data.departureTime),
-            availabilityNotes: data.availabilityNotes,
-            treatment: data.treatment,
-          })
-          .returning({ id: patientVisits.id });
-        await recordVisitEvent(tx, {
-          visitId: visit.id,
-          type: "registered",
-          actorId: user.id,
-        });
-        if (data.accommodation)
-          await tx
-            .insert(patientAccommodations)
-            .values({ visitId: visit.id, ...data.accommodation });
-        if (data.transfer)
-          await tx
-            .insert(patientTransfers)
-            .values({ visitId: visit.id, ...data.transfer });
-        const name = `${data.firstName} ${data.lastName}`;
-        await publishTeamEvent(tx, {
-          audience: "patient",
-          title: "Pacient înregistrat",
-          message: name,
-          href: `/patients/${visit.id}`,
-          visitId: visit.id,
-        });
-        await publishTeamEvent(
-          tx,
-          {
-            audience: "backOfficeCase",
-            title: "Caz nou · Back office",
-            message: `${name} · Sosire ${data.arrivalDate} ${data.arrivalTime}`,
-            href: "/back-office",
-            visitId: visit.id,
-          },
-          true,
-        );
-        if (data.accommodation)
-          await publishTeamEvent(
-            tx,
-            {
-              audience: "accommodation",
-              title: "Cerere cazare · Neprelucrat",
-              message: `${name} · ${data.arrivalDate} – ${data.departureDate}`,
-              href: "/accommodations",
-              visitId: visit.id,
-            },
-            true,
-          );
-        if (data.transfer)
-          await publishTeamEvent(
-            tx,
-            {
-              audience: "transfer",
-              title: "Transfer nou",
-              message: `${name} · ${data.transfer.direction === "round_trip" ? "Sosire și plecare" : data.transfer.oneWayLeg === "departure" ? "Plecare" : "Sosire"}`,
-              href: "/transfers",
-              visitId: visit.id,
-            },
-            true,
-          );
-        return visit.id;
-      }
       const data = parsed.data;
       const [patient] = await tx
         .insert(patients)
@@ -180,22 +216,21 @@ export async function createPatientRegistration(
           lastName: data.patient.lastName,
         })
         .returning({ id: patients.id });
-      const visitId = await createVisit(data.patient, patient.id);
-      if (data.companion) {
-        const [companion] = await tx
-          .insert(patients)
-          .values({
-            firstName: data.companion.firstName,
-            lastName: data.companion.lastName,
-          })
-          .returning({ id: patients.id });
-        const treatmentVisitId = data.companion.visit
-          ? await createVisit(data.companion.visit, companion.id)
-          : null;
-        await tx
-          .insert(patientCompanions)
-          .values({ visitId, patientId: companion.id, treatmentVisitId });
-      }
+      const visitId = await createVisit(
+        tx,
+        data.patient,
+        patient.id,
+        user.id,
+        t.patients.errors.coordinatorUnavailable,
+      );
+      if (data.companion)
+        await addCompanion(
+          tx,
+          visitId,
+          data.companion,
+          user.id,
+          t.patients.errors.coordinatorUnavailable,
+        );
       return visitId;
     });
     revalidatePath("/patients");
@@ -261,6 +296,13 @@ export async function updatePatientVisit(
   const invalidCompanions = companionNames.flatMap(({ parsed, prefix }) =>
     parsed.success ? [] : [fieldErrors(t, parsed.error.issues, prefix)],
   );
+  const newCompanion = companionSchema.safeParse(readCompanion(form));
+  if (newCompanion.data && !can(roles, "patient", "create"))
+    return { status: "error", message: errors.updatePermission };
+  if (!newCompanion.success)
+    invalidCompanions.push(
+      fieldErrors(t, newCompanion.error.issues, "companion."),
+    );
   if (invalidCompanions.length)
     return {
       status: "error",
@@ -299,6 +341,14 @@ export async function updatePatientVisit(
             .update(patients)
             .set(parsed.data)
             .where(eq(patients.id, patientId));
+      if (newCompanion.data)
+        await addCompanion(
+          tx,
+          visitId,
+          newCompanion.data,
+          user.id,
+          errors.coordinatorUnavailable,
+        );
       const [stay] = await tx
         .update(patientVisits)
         .set({
@@ -310,6 +360,10 @@ export async function updatePatientVisit(
           treatment: can(roles, "treatment", "update")
             ? data.treatment
             : current.treatment,
+          // Left out of the update when the form or API call doesn't send it.
+          treatmentNotes: can(roles, "treatment", "update")
+            ? data.treatmentNotes
+            : undefined,
         })
         .where(eq(patientVisits.id, visitId))
         .returning({
@@ -479,18 +533,56 @@ export async function updatePatientVisit(
         href: `/patients/${visitId}`,
         visitId,
       });
-      const accommodationChanged =
-        datesChanged ||
+      const moved = (label: string, from: Date, to: Date) =>
+        from.getTime() === to.getTime()
+          ? []
+          : [`${label} ${formatInstant(from)} → ${formatInstant(to)}`];
+      if (datesChanged)
+        await publishTeamEvent(
+          tx,
+          {
+            audience: "patient",
+            title: "Date modificate",
+            message: [
+              name,
+              ...moved("Sosire", current.arrivalAt, stay.arrival),
+              ...moved("Plecare", current.departureAt, stay.departure),
+            ].join(" · "),
+            href: `/patients/${visitId}`,
+            visitId,
+          },
+          true,
+        );
+      // New dates already have their own Telegram message.
+      const accommodationEdited =
         !request !== !accommodation ||
-        request?.apartmentType !== accommodation?.apartmentType;
-      if ((request || accommodation) && accommodationChanged)
-        await publishTeamEvent(tx, {
-          audience: "accommodation",
-          title: "Cazare · Actualizată",
-          message: `${name} · ${data.arrivalDate} – ${data.departureDate}`,
-          href: "/accommodations",
-          visitId,
-        });
+        request?.apartmentType !== accommodation?.apartmentType ||
+        request?.isFree !== accommodation?.isFree ||
+        request?.freeDays !== accommodation?.freeDays;
+      const booked = accommodation ?? request;
+      if (booked && (datesChanged || accommodationEdited))
+        await publishTeamEvent(
+          tx,
+          {
+            audience: "accommodation",
+            title: !accommodation
+              ? "Cazare · Anulată"
+              : request
+                ? "Cazare · Actualizată"
+                : "Cerere cazare · Neprelucrat",
+            message: [
+              name,
+              ro.apartmentTypes[booked.apartmentType],
+              formatStay(data.arrivalDate, data.departureDate),
+              ...(accommodation?.isFree
+                ? [formatFreeDays(accommodation.freeDays)]
+                : []),
+            ].join(" · "),
+            href: "/accommodations",
+            visitId,
+          },
+          accommodationEdited,
+        );
       const transferChanged =
         datesChanged ||
         !existingTransfer !== !transfer ||
@@ -500,7 +592,7 @@ export async function updatePatientVisit(
         await publishTeamEvent(tx, {
           audience: "transfer",
           title: "Transfer actualizat",
-          message: `${name} · ${data.arrivalDate} – ${data.departureDate}`,
+          message: `${name} · ${formatStay(data.arrivalDate, data.departureDate)}`,
           href: "/transfers",
           visitId,
         });

@@ -3,6 +3,7 @@ import { ResourceTable } from "@/components/data-table";
 import { Suspense } from "react";
 import { redirect } from "next/navigation";
 import { asc } from "drizzle-orm";
+import { PageContent } from "@/components/page-content";
 import { SiteHeader } from "@/components/site-header";
 import {
   CreateTreatmentDialog,
@@ -82,11 +83,11 @@ export default function Page() {
   return (
     <>
       <SiteHeader title="treatments" />
-      <div className="p-4 lg:p-6">
+      <PageContent>
         <Suspense fallback={<Skeleton className="h-80 w-full" />}>
           <Content />
         </Suspense>
-      </div>
+      </PageContent>
     </>
   );
 }

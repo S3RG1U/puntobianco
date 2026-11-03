@@ -128,7 +128,7 @@ async function main() {
     const visits = await (await call("visits", {}, narrow)).json();
     assert.ok(!("treatment" in visits.data[0])); assert.ok(!("availabilityNotes" in visits.data[0]));
     const limitedDetail = await (await call(`visits/${registered.data.id}`, {}, narrow)).json();
-    for (const field of ["treatment", "availabilityNotes", "accommodation", "transfer"]) {
+    for (const field of ["treatment", "treatmentNotes", "availabilityNotes", "accommodation", "transfer"]) {
       assert.ok(!(field in limitedDetail.data), field);
     }
     const fullWriter = await key("00000000-0000-4000-8000-000000000005", "api-admin", ["patient:update", "treatment:update", "accommodation:update", "transfer:update"]);

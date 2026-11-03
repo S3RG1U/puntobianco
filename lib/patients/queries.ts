@@ -28,6 +28,7 @@ export function listVisits({ id, after, limit, patientId, includeMedical }: Quer
     departureAt: patientVisits.departureAt,
     ...(includeMedical ? {
       treatment: patientVisits.treatment,
+      treatmentNotes: patientVisits.treatmentNotes,
       availabilityNotes: patientVisits.availabilityNotes,
     } : {}),
   }).from(patientVisits).where(and(

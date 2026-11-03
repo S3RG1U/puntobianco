@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import {
+  completedTabs,
   registrationSchema,
   readVisit,
   visitSchema,
@@ -107,13 +108,89 @@ test("ignores hidden service values after a request is unchecked", () => {
   assert.equal(result.accommodation, undefined);
   assert.equal(result.transfer, undefined);
 });
-test("a single date-time answer fills the date and time of the visit", () => {
+const filledForm = (fields: Record<string, string>) => {
   const form = new FormData();
-  form.set("patient.arrival", "2026-11-18T09:30");
-  form.set("patient.departure", "2026-11-22T18:00");
-  const visit = readVisit(form, "patient");
-  assert.equal(visit.arrivalDate, "2026-11-18");
-  assert.equal(visit.arrivalTime, "09:30");
-  assert.equal(visit.departureDate, "2026-11-22");
-  assert.equal(visit.departureTime, "18:00");
+  for (const [key, value] of Object.entries(fields)) form.set(key, value);
+  return form;
+};
+const filledVisit = {
+  "patient.firstName": "Ana",
+  "patient.lastName": "Pop",
+  "patient.arrivalDate": "2026-11-10",
+  "patient.arrivalTime": "09:00",
+  "patient.departureDate": "2026-11-13",
+  "patient.departureTime": "18:00",
+  "patient.coordinatorId": "coordinator-id",
+  "patient.availabilityNotes": "",
+  "patient.treatment": "Consultation",
+};
+test("marks only the required tabs as complete until an optional section is asked for", () => {
+  assert.deepEqual(completedTabs(filledForm({})), []);
+  assert.deepEqual(completedTabs(filledForm(filledVisit)), [
+    "overview",
+    "treatment",
+  ]);
+  assert.deepEqual(
+    completedTabs(
+      filledForm({ ...filledVisit, "patient.needsAccommodation": "on" }),
+    ),
+    ["overview", "treatment"],
+  );
+  assert.deepEqual(
+    completedTabs(
+      filledForm({
+        ...filledVisit,
+        "patient.needsAccommodation": "on",
+        "patient.apartmentType": "studio",
+        "patient.needsTransfer": "on",
+        "patient.transferDirection": "round_trip",
+        hasCompanion: "on",
+        "companion.firstName": "Ion",
+        "companion.lastName": "Pop",
+      }),
+    ),
+    ["overview", "treatment", "accommodation", "transfer", "companions"],
+  );
+});
+test("keeps the overview tab incomplete when the departure is before the arrival", () => {
+  assert.deepEqual(
+    completedTabs(
+      filledForm({ ...filledVisit, "patient.departureDate": "2026-11-01" }),
+    ),
+    ["treatment"],
+  );
+});
+test("treatment notes are optional and stay undefined when not sent", () => {
+  assert.equal(readVisit(filledForm(filledVisit), "patient").treatmentNotes, undefined);
+  assert.equal(
+    readVisit(
+      filledForm({ ...filledVisit, "patient.treatmentNotes": "a\r\nb" }),
+      "patient",
+    ).treatmentNotes,
+    "a\nb",
+  );
+});
+
+test("a companion being added on an existing registration must be filled in too", () => {
+  const saved = {
+    ...filledVisit,
+    "companions.id-1.firstName": "Ion",
+    "companions.id-1.lastName": "Pop",
+  };
+  assert.ok(completedTabs(filledForm(saved)).includes("companions"));
+  assert.ok(
+    !completedTabs(filledForm({ ...saved, hasCompanion: "on" })).includes(
+      "companions",
+    ),
+  );
+  assert.ok(
+    completedTabs(
+      filledForm({
+        ...filledVisit,
+        hasCompanion: "on",
+        "companion.firstName": "Eva",
+        "companion.lastName": "Pop",
+      }),
+    ).includes("companions"),
+  );
 });
