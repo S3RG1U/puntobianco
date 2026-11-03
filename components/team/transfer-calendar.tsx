@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useMemo, useState, useTransition } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   CheckIcon,
   ChevronLeftIcon,
@@ -7,9 +7,16 @@ import {
   PlaneLandingIcon,
   PlaneTakeoffIcon,
 } from "lucide-react";
-import { toast } from "sonner";
 import { cn } from "cn";
-import { setTransferPickup } from "@/app/(clinic)/transfers/actions";
+import {
+  DriverTransferCard,
+  TransferRoute,
+} from "@/components/team/driver-transfer-card";
+import {
+  HoverCard,
+  HoverCardTrigger,
+  HoverCardContent,
+} from "@/components/ui/hover-card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -105,27 +112,39 @@ function EventPill({ event }: { event: TransferEvent }) {
   const { t } = useI18n();
   const { Icon, className } = legStyles[event.leg];
   return (
-    <span
-      title={`${t.transfers.legs[event.leg]} ${clock.format(new Date(event.start))} – ${event.names.join(", ")}`}
-      className={cn(
-        "flex min-w-0 items-center gap-1 rounded-md border px-1.5 py-0.5 text-xs",
-        className,
-      )}
-    >
-      {event.pickedUp ? (
-        <CheckIcon
-          role="img"
-          aria-label={t.transfers.pickedUp}
-          className="size-3 shrink-0"
-        />
-      ) : (
-        <Icon aria-hidden className="size-3 shrink-0" />
-      )}
-      <span className="shrink-0 font-medium tabular-nums">
-        {clock.format(new Date(event.start))}
-      </span>
-      <span className="truncate text-foreground">{event.names.join(", ")}</span>
-    </span>
+    <HoverCard>
+      <HoverCardTrigger render={<span />}>
+        <span
+          className={cn(
+            "flex min-w-0 items-center gap-1 rounded-md border px-1.5 py-0.5 text-xs",
+            className,
+          )}
+        >
+          {event.completedAt || event.pickedUp ? (
+            <CheckIcon
+              role="img"
+              aria-label={event.completedAt ? t.transfers.details.completed : t.transfers.pickedUp}
+              className="size-3 shrink-0"
+            />
+          ) : (
+            <Icon aria-hidden className="size-3 shrink-0" />
+          )}
+          <span className="shrink-0 font-medium tabular-nums">
+            {clock.format(new Date(event.start))}
+          </span>
+          <span className="truncate text-foreground">
+            {event.names.join(", ")}
+          </span>
+        </span>
+      </HoverCardTrigger>
+      <HoverCardContent className="w-80 max-w-[calc(100vw-2rem)]" align="start">
+        <p className="mb-1 font-semibold">{event.names.join(", ")}</p>
+        <p className="mb-3 text-xs text-muted-foreground">
+          {t.transfers.legs[event.leg]} · {clock.format(new Date(event.start))}
+        </p>
+        <TransferRoute event={event} />
+      </HoverCardContent>
+    </HoverCard>
   );
 }
 
@@ -133,57 +152,18 @@ type PickupToggle = (event: TransferEvent) => void;
 
 function EventCard({
   event,
-  onTogglePickup,
+  onTransferChanged,
 }: {
   event: TransferEvent;
-  onTogglePickup?: PickupToggle;
+  onTransferChanged?: PickupToggle;
 }) {
-  const { t } = useI18n();
-  const { Icon, className } = legStyles[event.leg];
   return (
-    <li className="flex items-start gap-3 rounded-lg border bg-background p-3">
-      <span
-        className={cn(
-          "flex size-8 shrink-0 items-center justify-center rounded-md border",
-          className,
-        )}
-      >
-        <Icon aria-hidden className="size-4" />
-      </span>
-      <div className="min-w-0 flex-1">
-        <p className="flex flex-wrap gap-x-2 text-sm font-medium tabular-nums">
-          {clock.format(new Date(event.start))}
-          <span className="font-normal text-muted-foreground">
-            {t.transfers.legs[event.leg]}
-          </span>
-        </p>
-        <ul className="mt-0.5 text-sm break-words">
-          {event.names.map((name, index) => (
-            <li key={`${name}-${index}`}>{name}</li>
-          ))}
-        </ul>
-        {/* A transfer can't be marked before its day. */}
-        {onTogglePickup && clinicDay(new Date(event.start)) <= clinicDay(new Date()) ? (
-          <Button
-            size="sm"
-            variant={event.pickedUp ? "secondary" : "outline"}
-            aria-pressed={event.pickedUp}
-            className="mt-2 h-auto min-h-7 whitespace-normal"
-            onClick={() => onTogglePickup(event)}
-          >
-            {event.pickedUp && <CheckIcon data-icon="inline-start" />}
-            {event.pickedUp ? t.transfers.pickedUp : t.transfers.markPickedUp}
-          </Button>
-        ) : (
-          event.pickedUp && (
-            <Badge variant="success" className="mt-2">
-              <CheckIcon aria-hidden />
-              {t.transfers.pickedUp}
-            </Badge>
-          )
-        )}
-      </div>
-    </li>
+    <DriverTransferCard
+      key={event.id}
+      event={event}
+      canManage={!!onTransferChanged}
+      onChanged={() => onTransferChanged?.(event)}
+    />
   );
 }
 
@@ -269,13 +249,13 @@ function WeekColumns({
   today,
   eventsByDay,
   onOpenDay,
-  onTogglePickup,
+  onTransferChanged,
 }: {
   days: string[];
   today: string;
   eventsByDay: Map<string, TransferEvent[]>;
   onOpenDay: (day: string) => void;
-  onTogglePickup?: PickupToggle;
+  onTransferChanged?: PickupToggle;
 }) {
   const { locale, t } = useI18n();
   const format = dayFormatter(locale);
@@ -307,7 +287,7 @@ function WeekColumns({
                   <EventCard
                     key={event.id}
                     event={event}
-                    onTogglePickup={onTogglePickup}
+                    onTransferChanged={onTransferChanged}
                   />
                 ))}
               </ul>
@@ -325,10 +305,10 @@ function WeekColumns({
 
 function DayList({
   events,
-  onTogglePickup,
+  onTransferChanged,
 }: {
   events: TransferEvent[];
-  onTogglePickup?: PickupToggle;
+  onTransferChanged?: PickupToggle;
 }) {
   const { t } = useI18n();
   if (!events.length)
@@ -343,7 +323,7 @@ function DayList({
         <EventCard
           key={event.id}
           event={event}
-          onTogglePickup={onTogglePickup}
+          onTransferChanged={onTransferChanged}
         />
       ))}
     </ul>
@@ -356,7 +336,6 @@ export function TransferCalendar({
   canMarkPickup: boolean;
 }) {
   const { locale, t } = useI18n();
-  const [saving, startSaving] = useTransition();
   const [today] = useState(() => clinicDay(new Date()));
   const [view, setView] = useState<View>("month");
   const [anchor, setAnchor] = useState(today);
@@ -414,21 +393,9 @@ export function TransferCalendar({
         ? addMonths(current, direction)
         : addDays(current, direction * (view === "week" ? 7 : 1)),
     );
-  const togglePickup: PickupToggle = (event) =>
-    startSaving(async () => {
-      try {
-        const result = await setTransferPickup(
-          event.visitId,
-          event.leg,
-          !event.pickedUp,
-        );
-        if (result.error) toast.error(result.error);
-        setVersion((current) => current + 1);
-      } catch {
-        toast.error(t.backOffice.connectionLost);
-      }
-    });
-  const onTogglePickup = canMarkPickup && !saving ? togglePickup : undefined;
+  const onTransferChanged = canMarkPickup
+    ? () => setVersion((current) => current + 1)
+    : undefined;
   const openDay = (day: string) => {
     setAnchor(day);
     setView("day");
@@ -525,13 +492,13 @@ export function TransferCalendar({
             today={today}
             eventsByDay={eventsByDay}
             onOpenDay={openDay}
-            onTogglePickup={onTogglePickup}
+            onTransferChanged={onTransferChanged}
           />
         )}
         {view === "day" && (
           <DayList
             events={eventsByDay.get(anchor) ?? []}
-            onTogglePickup={onTogglePickup}
+            onTransferChanged={onTransferChanged}
           />
         )}
       </div>

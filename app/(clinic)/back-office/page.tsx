@@ -1,3 +1,5 @@
+import { Card, CardContent } from "@/components/ui/card";
+import { ResourceTable } from "@/components/data-table";
 import { Suspense } from "react";
 import Link from "next/link";
 import { redirect } from "next/navigation";
@@ -15,14 +17,6 @@ import { VisitTimelineSheet } from "@/components/patients/visit-timeline";
 import { listVisitEvents } from "@/lib/patients/visit-events";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import {
-  Table,
-  TableHeader,
-  TableHead,
-  TableRow,
-  TableBody,
-  TableCell,
-} from "@/components/ui/table";
 export async function generateMetadata() {
   const { t } = await getI18n();
   return { title: t.backOffice.title };
@@ -38,9 +32,6 @@ async function Content({
   if (!can(roles, "backOfficeCase", "read")) redirect("/dashboard");
   const params = await searchParams;
   const completed = params.status === "completed";
-  const page = Math.floor(
-    Math.max(1, Math.min(100000, Number(params.page) || 1)),
-  );
   const rows = await db
     .select({
       visit: patientVisits,
@@ -56,20 +47,16 @@ async function Content({
         ? eq(patientVisits.backOfficeStatus, "completed")
         : ne(patientVisits.backOfficeStatus, "completed"),
     )
-    .orderBy(asc(patientVisits.arrivalAt), asc(patientVisits.id))
-    .limit(51)
-    .offset((page - 1) * 50);
+    .orderBy(asc(patientVisits.arrivalAt), asc(patientVisits.id));
   const timelines = await listVisitEvents(
-    rows.slice(0, 50).map(({ visit }) => visit.id),
+    rows.map(({ visit }) => visit.id),
     roles,
   );
   return (
     <div className="flex flex-col gap-5">
       <div>
         <h2 className="text-2xl font-semibold">{t.backOffice.title}</h2>
-        <p className="text-sm text-muted-foreground">
-          {t.backOffice.subtitle}
-        </p>
+        <p className="text-sm text-muted-foreground">{t.backOffice.subtitle}</p>
       </div>
       <div className="flex gap-2">
         <Button
@@ -87,101 +74,68 @@ async function Content({
           {t.backOffice.completed}
         </Button>
       </div>
-      <div className="overflow-hidden rounded-lg border">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>{t.common.patient}</TableHead>
-              <TableHead>{t.common.arrival}</TableHead>
-              <TableHead>{t.common.status}</TableHead>
-              <TableHead>{t.backOffice.assignee}</TableHead>
-              <TableHead>{t.backOffice.action}</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {rows
-              .slice(0, 50)
-              .map(({ visit, firstName, lastName, assignee }) => (
-                <TableRow key={visit.id}>
-                  <TableCell>
-                    <Link
-                      className="hover:underline"
-                      href={`/patients/${visit.id}`}
-                    >
-                      {firstName} {lastName}
-                    </Link>
-                  </TableCell>
-                  <TableCell>
-                    {new Intl.DateTimeFormat(intlLocales[locale], {
-                      dateStyle: "medium",
-                      timeStyle: "short",
-                      timeZone: "Europe/Chisinau",
-                    }).format(visit.arrivalAt)}
-                  </TableCell>
-                  <TableCell>
-                    <StatusBadge status={visit.backOfficeStatus} />
-                  </TableCell>
-                  <TableCell>{assignee ?? "—"}</TableCell>
-                  <TableCell>
-                    <div className="flex flex-wrap items-center gap-2">
-                      {can(roles, "backOfficeCase", "update") &&
-                        (visit.backOfficeStatus === "pending" ? (
-                          <CaseAction id={visit.id} action="start" />
-                        ) : visit.backOfficeStatus === "in_progress" &&
-                          (visit.backOfficeAssigneeId === user.id ||
-                            roles.includes("admin")) ? (
-                          <CaseAction id={visit.id} action="complete" />
-                        ) : null)}
-                      <VisitTimelineSheet
-                        patientName={`${firstName} ${lastName}`}
-                        events={timelines.get(visit.id) ?? []}
-                      />
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ))}
-            {!rows.length && (
-              <TableRow>
-                <TableCell
-                  colSpan={5}
-                  className="h-24 text-center text-muted-foreground"
-                >
-                  {t.backOffice.empty}
-                </TableCell>
-              </TableRow>
-            )}
-          </TableBody>
-        </Table>
-      </div>
-      <nav className="flex justify-end gap-3" aria-label={t.backOffice.pagesLabel}>
-        <span>{t.common.page(page)}</span>
-        {page > 1 && (
-          <Button
-            nativeButton={false}
-            variant="outline"
-            render={
-              <Link
-                href={`?status=${completed ? "completed" : "open"}&page=${page - 1}`}
-              />
-            }
-          >
-            {t.common.previous}
-          </Button>
-        )}
-        {rows.length > 50 && (
-          <Button
-            nativeButton={false}
-            variant="outline"
-            render={
-              <Link
-                href={`?status=${completed ? "completed" : "open"}&page=${page + 1}`}
-              />
-            }
-          >
-            {t.common.next}
-          </Button>
-        )}
-      </nav>
+      <Card>
+        <CardContent>
+          <ResourceTable
+            tab={{
+              value: "cases",
+              label: t.backOffice.title,
+              columns: [
+                { key: "name", header: t.common.patient },
+                { key: "arrival", header: t.common.arrival },
+                { key: "status", header: t.common.status },
+                { key: "assignee", header: t.backOffice.assignee },
+                { key: "actions", header: t.common.actions },
+              ],
+              rows: rows.map(({ visit, firstName, lastName, assignee }) => ({
+                _id: visit.id,
+                name: `${firstName} ${lastName}`,
+                arrival: new Intl.DateTimeFormat(intlLocales[locale], {
+                  dateStyle: "medium",
+                  timeStyle: "short",
+                  timeZone: "Europe/Chisinau",
+                }).format(visit.arrivalAt),
+                status: t.status[visit.backOfficeStatus],
+                assignee: assignee ?? "—",
+              })),
+              cellContent: Object.fromEntries(
+                rows.map(({ visit, firstName, lastName }) => [
+                  visit.id,
+                  {
+                    name: (
+                      <Link href={`/patients/${visit.id}`}>
+                        {firstName} {lastName}
+                      </Link>
+                    ),
+                    status: <StatusBadge status={visit.backOfficeStatus} />,
+                    actions: (
+                      <>
+                        {can(roles, "backOfficeCase", "update") &&
+                          (visit.backOfficeStatus === "pending" ? (
+                            <CaseAction menuItem id={visit.id} action="start" />
+                          ) : visit.backOfficeStatus === "in_progress" &&
+                            (visit.backOfficeAssigneeId === user.id ||
+                              roles.includes("admin")) ? (
+                            <CaseAction
+                              menuItem
+                              id={visit.id}
+                              action="complete"
+                            />
+                          ) : null)}
+                        <VisitTimelineSheet
+                          menuItem
+                          patientName={`${firstName} ${lastName}`}
+                          events={timelines.get(visit.id) ?? []}
+                        />
+                      </>
+                    ),
+                  },
+                ]),
+              ),
+            }}
+          />
+        </CardContent>
+      </Card>
     </div>
   );
 }

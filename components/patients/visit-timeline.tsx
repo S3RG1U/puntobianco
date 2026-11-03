@@ -88,9 +88,11 @@ export function VisitTimeline({ events }: { events: VisitEventView[] }) {
 }
 
 export function VisitTimelineSheet({
+  menuItem = false,
   patientName,
   events,
 }: {
+  menuItem?: boolean;
   patientName: string;
   events: VisitEventView[];
 }) {
@@ -98,7 +100,13 @@ export function VisitTimelineSheet({
   return (
     <Sheet>
       <SheetTrigger
-        render={<Button variant="ghost" size="sm" />}
+        render={
+          <Button
+            variant="ghost"
+            size="sm"
+            className={menuItem ? "w-full justify-start" : undefined}
+          />
+        }
         aria-label={t.timeline.openFor(patientName)}
       >
         <HistoryIcon data-icon="inline-start" />

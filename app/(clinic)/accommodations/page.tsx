@@ -1,3 +1,6 @@
+import { BookingSearchDialog } from "@/components/accommodations/booking-search-dialog";
+import { clinicDay } from "@/lib/transfers/calendar";
+import { ResourceTable } from "@/components/data-table";
 import { Suspense } from "react";
 import Link from "next/link";
 import { redirect } from "next/navigation";
@@ -8,7 +11,6 @@ import {
   ManageAccommodationDialog,
 } from "@/components/accommodations/accommodation-dialogs";
 import { StatusBadge } from "@/components/team/status-badge";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -17,14 +19,6 @@ import {
   CardDescription,
   CardContent,
 } from "@/components/ui/card";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
 import { Skeleton } from "@/components/ui/skeleton";
 import { requireSession } from "@/lib/auth/session";
 import { can, parseRoles } from "@/lib/auth/permissions";
@@ -56,10 +50,7 @@ async function Content({
   const labels = t.accommodations;
   const roles = parseRoles(user.role);
   if (!can(roles, "accommodation", "read")) redirect("/dashboard");
-  const params = await searchParams;
-  const page = Math.floor(
-    Math.max(1, Math.min(100000, Number(params.page) || 1)),
-  );
+  await searchParams;
   const [apartments, requests] = await Promise.all([
     db.select().from(accommodations).orderBy(asc(accommodations.name)),
     db
@@ -80,116 +71,81 @@ async function Content({
         asc(patientAccommodations.status),
         asc(patientVisits.arrivalAt),
         asc(patientAccommodations.id),
-      )
-      .limit(51)
-      .offset((page - 1) * 50),
+      ),
   ]);
   return (
     <div className="flex flex-col gap-6">
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
           <h2 className="text-2xl font-semibold">{labels.title}</h2>
-          <p className="text-sm text-muted-foreground">
-            {labels.subtitle}
-          </p>
+          <p className="text-sm text-muted-foreground">{labels.subtitle}</p>
         </div>
         {can(roles, "accommodation", "create") && <CreateApartmentDialog />}
       </div>
       <Card>
         <CardHeader>
           <CardTitle>{labels.requests}</CardTitle>
-          <CardDescription>
-            {labels.requestsHelp}
-          </CardDescription>
+          <CardDescription>{labels.requestsHelp}</CardDescription>
         </CardHeader>
         <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>{t.common.patient}</TableHead>
-                <TableHead>{labels.stay}</TableHead>
-                <TableHead>{t.common.type}</TableHead>
-                <TableHead>{t.common.apartment}</TableHead>
-                <TableHead>{t.common.status}</TableHead>
-                <TableHead>{t.common.terms}</TableHead>
-                <TableHead>
-                  <span className="sr-only">{t.common.actions}</span>
-                </TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {requests
-                .slice(0, 50)
-                .map(({ request, firstName, lastName, arrival, departure }) => (
-                  <TableRow key={request.id}>
-                    <TableCell className="font-medium">
-                      {firstName} {lastName}
-                    </TableCell>
-                    <TableCell className="whitespace-nowrap">
-                      {formatDate(arrival, locale)} — {formatDate(departure, locale)}
-                    </TableCell>
-                    <TableCell>
-                      {t.apartmentTypes[request.apartmentType]}
-                    </TableCell>
-                    <TableCell>
-                      {apartments.find((a) => a.id === request.accommodationId)
-                        ?.name ?? <Badge variant="secondary">{labels.unassigned}</Badge>}
-                    </TableCell>
-                    <TableCell>
-                      <StatusBadge status={request.status} />
-                    </TableCell>
-                    <TableCell>
-                      {request.isFree
-                        ? labels.freeTerms(request.freeDays)
-                        : labels.paid}
-                    </TableCell>
-                    <TableCell>
-                      {can(roles, "accommodation", "update") && (
-                        <ManageAccommodationDialog
-                          request={request}
-                          apartments={apartments}
-                          patientName={`${firstName} ${lastName}`}
-                        />
-                      )}
-                    </TableCell>
-                  </TableRow>
-                ))}
-              {!requests.length && (
-                <TableRow>
-                  <TableCell
-                    colSpan={7}
-                    className="h-28 text-center text-muted-foreground"
-                  >
-                    {labels.empty}
-                  </TableCell>
-                </TableRow>
-              )}
-            </TableBody>
-          </Table>
-          <nav
-            aria-label={labels.pagesLabel}
-            className="mt-4 flex items-center justify-end gap-3"
-          >
-            <span className="text-sm text-muted-foreground">{t.common.page(page)}</span>
-            {page > 1 && (
-              <Button
-                nativeButton={false}
-                variant="outline"
-                render={<Link href={`?page=${page - 1}`} />}
-              >
-                {t.common.previous}
-              </Button>
-            )}
-            {requests.length > 50 && (
-              <Button
-                nativeButton={false}
-                variant="outline"
-                render={<Link href={`?page=${page + 1}`} />}
-              >
-                {t.common.next}
-              </Button>
-            )}
-          </nav>
+          <ResourceTable
+            tab={{
+              value: "requests",
+              label: labels.requests,
+              columns: [
+                { key: "name", header: t.common.patient },
+                { key: "stay", header: labels.stay },
+                { key: "type", header: t.common.type },
+                { key: "apartment", header: t.common.apartment },
+                { key: "status", header: t.common.status },
+                { key: "terms", header: t.common.terms },
+                { key: "actions", header: t.common.actions },
+              ],
+              rows: requests.map(
+                ({ request, firstName, lastName, arrival, departure }) => ({
+                  _id: request.id,
+                  name: `${firstName} ${lastName}`,
+                  stay: `${formatDate(arrival, locale)} — ${formatDate(departure, locale)}`,
+                  type: t.apartmentTypes[request.apartmentType],
+                  apartment:
+                    apartments.find((a) => a.id === request.accommodationId)
+                      ?.name ?? labels.unassigned,
+                  status: t.status[request.status],
+                  terms: request.isFree
+                    ? labels.freeTerms(request.freeDays)
+                    : labels.paid,
+                }),
+              ),
+              cellContent: Object.fromEntries(
+                requests.map(
+                  ({ request, firstName, lastName, arrival, departure }) => [
+                    request.id,
+                    {
+                      status: <StatusBadge status={request.status} />,
+                      actions: can(roles, "accommodation", "update") ? (
+                        <>
+                          <ManageAccommodationDialog
+                            menuItem
+                            request={request}
+                            apartments={apartments}
+                            patientName={`${firstName} ${lastName}`}
+                          />
+                          <BookingSearchDialog
+                            arrival={clinicDay(arrival)}
+                            departure={clinicDay(departure)}
+                            apartmentType={
+                              t.apartmentTypes[request.apartmentType]
+                            }
+                            today={clinicDay(new Date())}
+                          />
+                        </>
+                      ) : null,
+                    },
+                  ],
+                ),
+              ),
+            }}
+          />
         </CardContent>
       </Card>
       <Card>
@@ -200,34 +156,44 @@ async function Content({
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>{t.common.apartment}</TableHead>
-                <TableHead>{t.common.type}</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {apartments.map((apartment) => (
-                <TableRow key={apartment.id}>
-                  <TableCell>{apartment.name}</TableCell>
-                  <TableCell>
-                    {t.apartmentTypes[apartment.apartmentType]}
-                  </TableCell>
-                </TableRow>
-              ))}
-              {!apartments.length && (
-                <TableRow>
-                  <TableCell
-                    colSpan={2}
-                    className="h-24 text-center text-muted-foreground"
-                  >
-                    {labels.noApartments}
-                  </TableCell>
-                </TableRow>
-              )}
-            </TableBody>
-          </Table>
+          <ResourceTable
+            tab={{
+              value: "apartments",
+              label: labels.inventory,
+              columns: [
+                { key: "name", header: t.common.apartment },
+                { key: "type", header: t.common.type },
+                { key: "address", header: labels.address },
+                { key: "actions", header: t.common.actions },
+              ],
+              rows: apartments.map((a) => ({
+                _id: a.id,
+                name: a.name,
+                type: t.apartmentTypes[a.apartmentType],
+                address: a.address,
+              })),
+              cellContent: Object.fromEntries(
+                apartments.map((a) => [
+                  a.id,
+                  {
+                    name: (
+                      <Link href={`/accommodations/${a.id}`}>{a.name}</Link>
+                    ),
+                    actions: (
+                      <Button
+                        nativeButton={false}
+                        variant="ghost"
+                        className="w-full justify-start"
+                        render={<Link href={`/accommodations/${a.id}`} />}
+                      >
+                        {labels.availability} / {labels.location}
+                      </Button>
+                    ),
+                  },
+                ]),
+              ),
+            }}
+          />
         </CardContent>
       </Card>
     </div>

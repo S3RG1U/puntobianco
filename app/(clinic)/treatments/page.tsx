@@ -1,3 +1,5 @@
+import { Card, CardContent } from "@/components/ui/card";
+import { ResourceTable } from "@/components/data-table";
 import { Suspense } from "react";
 import { redirect } from "next/navigation";
 import { asc } from "drizzle-orm";
@@ -6,16 +8,7 @@ import {
   CreateTreatmentDialog,
   EditTreatmentDialog,
 } from "@/components/treatments/treatment-dialogs";
-import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
 import { requireSession } from "@/lib/auth/session";
 import { can, parseRoles } from "@/lib/auth/permissions";
 import { db } from "@/lib/db";
@@ -46,58 +39,42 @@ async function Content() {
         </div>
         {can(roles, "treatment", "create") && <CreateTreatmentDialog />}
       </div>
-      <div className="overflow-hidden rounded-lg border">
-        <Table>
-          <TableHeader className="bg-muted">
-            <TableRow>
-              <TableHead>{t.treatments.name}</TableHead>
-              <TableHead>{t.treatments.category}</TableHead>
-              <TableHead>{t.treatments.description}</TableHead>
-              <TableHead className="text-right">
-                {t.treatments.duration}
-              </TableHead>
-              {canEdit && (
-                <TableHead>
-                  <span className="sr-only">{t.common.actions}</span>
-                </TableHead>
-              )}
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {sorted.map((treatment) => (
-              <TableRow key={treatment.id}>
-                <TableCell className="font-medium">{treatment.name}</TableCell>
-                <TableCell>
-                  <Badge variant="secondary">
-                    {t.treatments.categories[treatment.category]}
-                  </Badge>
-                </TableCell>
-                <TableCell className="min-w-64 whitespace-normal text-muted-foreground">
-                  {treatment.description}
-                </TableCell>
-                <TableCell className="text-right tabular-nums">
-                  {t.treatments.minutes(treatment.durationMinutes)}
-                </TableCell>
-                {canEdit && (
-                  <TableCell className="text-right">
-                    <EditTreatmentDialog treatment={treatment} />
-                  </TableCell>
-                )}
-              </TableRow>
-            ))}
-            {!rows.length && (
-              <TableRow>
-                <TableCell
-                  colSpan={canEdit ? 5 : 4}
-                  className="h-28 text-center text-muted-foreground"
-                >
-                  {t.treatments.empty}
-                </TableCell>
-              </TableRow>
-            )}
-          </TableBody>
-        </Table>
-      </div>
+      <Card>
+        <CardContent>
+          <ResourceTable
+            tab={{
+              value: "treatments",
+              label: t.treatments.title,
+              columns: [
+                { key: "name", header: t.treatments.name },
+                { key: "category", header: t.treatments.category },
+                { key: "description", header: t.treatments.description },
+                { key: "duration", header: t.treatments.duration },
+                ...(canEdit
+                  ? [{ key: "actions", header: t.common.actions }]
+                  : []),
+              ],
+              rows: sorted.map((row) => ({
+                _id: row.id,
+                name: row.name,
+                category: t.treatments.categories[row.category],
+                description: row.description ?? "",
+                duration: t.treatments.minutes(row.durationMinutes),
+              })),
+              cellContent: Object.fromEntries(
+                sorted.map((row) => [
+                  row.id,
+                  {
+                    actions: canEdit ? (
+                      <EditTreatmentDialog menuItem treatment={row} />
+                    ) : null,
+                  },
+                ]),
+              ),
+            }}
+          />
+        </CardContent>
+      </Card>
     </div>
   );
 }

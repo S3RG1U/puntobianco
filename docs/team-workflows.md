@@ -52,3 +52,9 @@ Official API: https://core.telegram.org/bots/api#sendmessage
 
 - `node --import tsx --test scripts/patient-registration.test.ts scripts/team-workflows.test.ts`
 - `node --conditions=react-server --env-file=.env --import tsx scripts/check-team-delivery.ts` checks disabled mode, retry-after, and successful delivery with a mocked API. It sends no messages and requires an empty pending delivery queue so real jobs cannot be affected.
+
+## Driver schedule and completion
+
+Drivers open a day and select View transfer to see pickup/drop-off and assigned apartment information. Unknown endpoints are explicitly unconfirmed. Change schedule or route opens date/time and location controls; every change requires a reason. These plans are separate from patient stays and reservation dates, and effective planned times drive the calendar and dashboard. Shared treatment companions move together. The mobile detail panel keeps Save or Complete within reach while its content scrolls. Completion is blocked until the scheduled time, and completed transfers can be reopened. Schedule changes, completion and reopening notify drivers and back office, with a per-leg audit history and optimistic concurrency checks.
+
+Verification also includes `node --conditions=react-server --import tsx --test scripts/transfer-plan.test.ts`.

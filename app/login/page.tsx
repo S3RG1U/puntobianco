@@ -3,7 +3,6 @@ import { redirect } from "next/navigation";
 import { Suspense } from "react";
 
 import { BrandMark } from "@/components/brand-mark";
-import { LocaleSwitcher } from "@/components/locale-switcher";
 import { LoginForm } from "@/components/login-form";
 import { getSession } from "@/lib/auth/session";
 import { getI18n } from "@/lib/i18n/server";
@@ -32,7 +31,6 @@ export default function LoginPage() {
             <BrandMark />
             Punto Bianco
           </div>
-          <LocaleSwitcher />
         </div>
         <main className="flex flex-1 items-center justify-center">
           <div className="w-full max-w-xs">

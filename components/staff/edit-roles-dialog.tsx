@@ -1,8 +1,14 @@
 "use client";
 
 import { CircleAlertIcon } from "lucide-react";
-import { startTransition, useActionState, useState, type FormEvent } from "react";
+import {
+  startTransition,
+  useActionState,
+  useState,
+  type FormEvent,
+} from "react";
 import { toast } from "sonner";
+import { cn } from "cn";
 
 import {
   updateStaffRoles,
@@ -73,7 +79,9 @@ function EditRolesForm({
         />
       </div>
       <DialogFooter>
-        <DialogClose render={<Button variant="outline" />}>{t.common.cancel}</DialogClose>
+        <DialogClose render={<Button variant="outline" />}>
+          {t.common.cancel}
+        </DialogClose>
         <Button type="submit" disabled={isPending}>
           {isPending && <Spinner data-icon="inline-start" />}
           {t.staff.saveRoles}
@@ -84,10 +92,12 @@ function EditRolesForm({
 }
 
 export function EditRolesDialog({
+  menuItem = false,
   userId,
   userName,
   currentRoles,
 }: {
+  menuItem?: boolean;
   userId: string;
   userName: string;
   currentRoles: RoleName[];
@@ -98,7 +108,13 @@ export function EditRolesDialog({
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
       <DialogTrigger
-        render={<Button variant="outline" size="sm" />}
+        render={
+          <Button
+            variant={menuItem ? "ghost" : "outline"}
+            size="sm"
+            className={cn(menuItem && "w-full justify-start")}
+          />
+        }
         aria-label={t.staff.editRolesFor(userName)}
       >
         {t.staff.editRoles}
@@ -106,7 +122,9 @@ export function EditRolesDialog({
       <DialogContent className="flex max-h-[90svh] flex-col">
         <DialogHeader>
           <DialogTitle>{t.staff.editRoles}</DialogTitle>
-          <DialogDescription>{t.staff.editRolesHelp(userName)}</DialogDescription>
+          <DialogDescription>
+            {t.staff.editRolesHelp(userName)}
+          </DialogDescription>
         </DialogHeader>
         <EditRolesForm
           userId={userId}

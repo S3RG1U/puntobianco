@@ -7,6 +7,7 @@ const quantity = (total: number, one: string, other: string) => {
 
 export const ro = {
   common: {
+    search: "Caută",
     cancel: "Anulează",
     previous: "Înapoi",
     next: "Înainte",
@@ -345,6 +346,19 @@ export const ro = {
     departureTime: "Ora plecării",
   },
   accommodations: {
+    booking: {"search": "Caută pe Booking.com", "help": "Găsește apartamente în Chișinău pentru acest sejur.", "adults": "Adulți", "layoutHelp": "Datele, numărul de persoane și filtrul de apartamente sunt trimise către Booking.com. Verifică numărul de dormitoare, canapeaua extensibilă și livingul în anunț înainte de rezervare.", "datesInvalid": "Booking.com necesită sosirea astăzi sau mai târziu și plecarea într-o zi ulterioară.", "open": "Deschide Booking.com"},
+    address: "Adresă",
+    addressHelp: "Stradă, număr, apartament, oraș, țară",
+    availability: "Disponibilitate",
+    available: "Liber",
+    occupied: "Ocupat",
+    availabilityHelp: "Selectați o dată pentru a vedea orele rezervate. Zilele marcate au cel puțin o rezervare; disponibilitatea reflectă repartizările salvate.",
+    location: "Locație",
+    directions: "Traseu și distanță până la Punto Bianco",
+    missingAddress: "Adăugați o adresă pentru a afișa apartamentul pe hartă.",
+    saveAddress: "Salvează adresa",
+    addressSaved: "Adresa a fost salvată.",
+
     title: "Cazare",
     subtitle: "Gestionați sejururile pacienților și atribuiți apartamente potrivite.",
     requests: "Cereri pacienți",
@@ -390,6 +404,7 @@ export const ro = {
     },
   },
   transfers: {
+    details: {"title": "Detalii transfer", "pickup": "Preluare", "dropoff": "Destinație", "notSet": "Locația trebuie confirmată", "apartment": "Apartament atribuit", "addressMissing": "Apartamentul atribuit nu are încă adresă. Confirmă locația exactă înainte de plecare.", "open": "Vezi transferul", "edit": "Modifică programul sau traseul", "newMoment": "Data și ora nouă", "reason": "Motivul modificării", "reasonPlaceholder": "De exemplu: zbor întârziat cu două ore", "save": "Salvează modificările", "cancel": "Renunță la modificări", "complete": "Marchează ca finalizat", "completed": "Finalizat", "reopen": "Redeschide transferul", "scheduled": "Programat", "history": "Istoricul modificărilor", "noHistory": "Nu există modificări.", "saved": "Transfer actualizat.", "completeSaved": "Transfer finalizat.", "checkFields": "Alege o dată și o oră valide și indică motivul.", "stale": "Transferul a fost modificat. Actualizează calendarul și încearcă din nou.", "reopenFirst": "Redeschide transferul finalizat înainte de a-l modifica.", "tooEarly": "Transferul nu poate fi finalizat înainte de ora programată.", "invalidDate": "Alege o dată și o oră valide, începând de astăzi. Ora poate să nu existe din cauza trecerii la ora de vară.", "failed": "Transferul nu a putut fi actualizat. Încearcă din nou.", "timeZone": "Toate orele sunt în ora locală a Chișinăului.", "reschedule": "Programul sau traseul a fost modificat", "reopened": "Transfer redeschis", "shared": "Modificările se aplică tuturor persoanelor din acest transfer comun.", "otherStops": "Alte opriri la apartamente", "navigate": "Deschide locația în Maps"},
     headerTitle: "Calendar transferuri",
     metadataTitle: "Calendar transferuri",
     title: "Transferuri",

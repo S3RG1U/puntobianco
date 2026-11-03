@@ -66,11 +66,13 @@ export async function getTransferSection(
           leg: t.transfers.legs[event.leg],
           pickup: pickup.format(new Date(event.start)),
           start: event.start,
-          status: event.pickedUp
-            ? t.transfers.pickedUp
-            : new Date(event.start) < now
-              ? labels.past
-              : labels.scheduled,
+          status: event.completedAt
+            ? t.transfers.details.completed
+            : event.pickedUp
+              ? t.transfers.pickedUp
+              : new Date(event.start) < now
+                ? labels.past
+                : labels.scheduled,
         })),
     },
   };

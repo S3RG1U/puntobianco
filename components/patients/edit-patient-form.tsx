@@ -10,7 +10,10 @@ import {
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { updatePatientVisit } from "@/app/(clinic)/patients/actions";
+import {
+  createPatientRegistration,
+  updatePatientVisit,
+} from "@/app/(clinic)/patients/actions";
 import { DateTimePicker } from "@/components/forms/date-time-picker";
 import { SelectField } from "@/components/forms/select-field";
 import {
@@ -18,6 +21,7 @@ import {
   type TreatmentOption,
 } from "@/components/forms/treatment-select";
 import {
+  CompanionVisitFields,
   AccommodationDetails,
   Check,
   NameFields,
@@ -49,7 +53,7 @@ import { initialFormState, type FormState } from "@/lib/patients/form-schema";
 type CompanionName = { patientId: string; firstName: string; lastName: string };
 
 function tabOfError(key: string) {
-  if (key.startsWith("companions.")) return "companions";
+  if (key.startsWith("companion")) return "companions";
   if (key.startsWith("patient.accommodation")) return "accommodation";
   if (key.startsWith("patient.transfer")) return "transfer";
   if (key === "patient.treatment") return "treatment";
@@ -93,6 +97,7 @@ type EditProps = {
   defaults: VisitDefaults;
   locked: { treatment: boolean; accommodation: boolean; transfer: boolean };
   companions: CompanionName[];
+  creating?: boolean;
 };
 
 // One form across the tabs: every panel stays mounted, so Save sends them all.
@@ -104,17 +109,22 @@ function EditForm({
   locked,
   companions,
   onSaved,
+  creating = false,
 }: EditProps & { onSaved: () => void }) {
   const router = useRouter();
   const { t } = useI18n();
   const labels = t.registration;
   const tabs = t.patientDetail.tabs;
+  const [hasCompanion, setHasCompanion] = useState(false);
+  const [companionTreatment, setCompanionTreatment] = useState(false);
   const [tab, setTab] = useState("overview");
   const [accommodation, setAccommodation] = useState(!!defaults.accommodation);
   const [transfer, setTransfer] = useState(!!defaults.transfer);
   const [state, action, pending] = useActionState(
     async (previous: FormState, form: FormData) => {
-      const result = await updatePatientVisit(previous, form);
+      const result = await (
+        creating ? createPatientRegistration : updatePatientVisit
+      )(previous, form);
       const firstError = Object.keys(result.errors ?? {})[0];
       if (firstError) setTab(tabOfError(firstError));
       return result;
@@ -124,10 +134,10 @@ function EditForm({
   const errors = state.errors ?? {};
   useEffect(() => {
     if (state.status !== "success") return;
-    toast.success(t.patients.updated);
-    router.push(`/patients/${id}`);
+    toast.success(creating ? labels.saved : t.patients.updated);
+    router.push(creating ? "/patients" : `/patients/${id}`);
     onSaved();
-  }, [state, id, router, t, onSaved]);
+  }, [state, id, router, t, onSaved, creating, labels.saved]);
   function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (pending) return;
@@ -138,7 +148,11 @@ function EditForm({
     <form noValidate onSubmit={submit} className="flex flex-col gap-4">
       <input type="hidden" name="id" value={id} />
       {locked.treatment && (
-        <input type="hidden" name="patient.treatment" value={defaults.treatment} />
+        <input
+          type="hidden"
+          name="patient.treatment"
+          value={defaults.treatment}
+        />
       )}
       {state.message && (
         <Alert variant="destructive">
@@ -152,12 +166,14 @@ function EditForm({
             <TabsTrigger value="treatment">{tabs.treatment}</TabsTrigger>
           )}
           {!locked.accommodation && (
-            <TabsTrigger value="accommodation">{tabs.accommodation}</TabsTrigger>
+            <TabsTrigger value="accommodation">
+              {tabs.accommodation}
+            </TabsTrigger>
           )}
           {!locked.transfer && (
             <TabsTrigger value="transfer">{tabs.transfer}</TabsTrigger>
           )}
-          {companions.length > 0 && (
+          {(creating || companions.length > 0) && (
             <TabsTrigger value="companions">{tabs.companions}</TabsTrigger>
           )}
         </TabsList>
@@ -165,38 +181,61 @@ function EditForm({
           <Card>
             <CardHeader>
               <CardTitle>{t.patientDetail.stay}</CardTitle>
-              <CardDescription>{t.patients.editHelp}</CardDescription>
+              <CardDescription>
+                {creating ? labels.steps.clinicTime : t.patients.editHelp}
+              </CardDescription>
             </CardHeader>
             <CardContent>
               <FieldGroup>
-                <NameFields prefix="patient" errors={errors} defaults={defaults} />
+                <NameFields
+                  prefix="patient"
+                  errors={errors}
+                  defaults={defaults}
+                />
                 <Moment
                   moment="arrival"
                   label={t.common.arrival}
-                  value={`${defaults.arrivalDate}T${defaults.arrivalTime}`}
+                  value={
+                    defaults.arrivalDate
+                      ? `${defaults.arrivalDate}T${defaults.arrivalTime}`
+                      : ""
+                  }
                   defaultTime="09:00"
-                  error={errors["patient.arrivalDate"] ?? errors["patient.arrivalTime"]}
+                  error={
+                    errors["patient.arrivalDate"] ??
+                    errors["patient.arrivalTime"]
+                  }
                 />
                 <Moment
                   moment="departure"
                   label={t.common.departure}
-                  value={`${defaults.departureDate}T${defaults.departureTime}`}
+                  value={
+                    defaults.departureDate
+                      ? `${defaults.departureDate}T${defaults.departureTime}`
+                      : ""
+                  }
                   defaultTime="18:00"
                   error={
-                    errors["patient.departureDate"] ?? errors["patient.departureTime"]
+                    errors["patient.departureDate"] ??
+                    errors["patient.departureTime"]
                   }
                 />
                 <SelectField
                   name="patient.coordinatorId"
                   label={labels.responsibleCoordinator}
                   defaultValue={defaults.coordinatorId}
-                  options={coordinators.map((c) => ({ value: c.id, label: c.name }))}
+                  options={coordinators.map((c) => ({
+                    value: c.id,
+                    label: c.name,
+                  }))}
                   error={errors["patient.coordinatorId"]}
                 />
                 <Field>
                   <FieldLabel htmlFor="patient.availabilityNotes">
                     {labels.availability}{" "}
-                    <span className="text-muted-foreground">{labels.optional}</span>
+                    <span className="text-muted-foreground">
+                      {labels.optional}
+                    </span>
                   </FieldLabel>
                   <Textarea
                     id="patient.availabilityNotes"
@@ -219,7 +258,10 @@ function EditForm({
               </CardHeader>
               <CardContent>
                 <Field data-invalid={!!errors["patient.treatment"]}>
-                  <FieldLabel htmlFor="patient.treatment-search" className="sr-only">
+                  <FieldLabel
+                    htmlFor="patient.treatment-search"
+                    className="sr-only"
+                  >
                     {labels.plannedTreatment}
                   </FieldLabel>
                   <TreatmentSelect
@@ -292,7 +334,7 @@ function EditForm({
             </Card>
           </TabsContent>
         )}
-        {companions.length > 0 && (
+        {(creating || companions.length > 0) && (
           <TabsContent value="companions" keepMounted>
             <Card>
               <CardHeader>
@@ -300,6 +342,37 @@ function EditForm({
               </CardHeader>
               <CardContent>
                 <FieldGroup>
+                  {creating && (
+                    <>
+                      <Check
+                        name="hasCompanion"
+                        checked={hasCompanion}
+                        onChange={setHasCompanion}
+                      >
+                        {labels.companionHelp}
+                      </Check>
+                      {hasCompanion && (
+                        <>
+                          <NameFields prefix="companion" errors={errors} />
+                          <Check
+                            name="companionTreatment"
+                            checked={companionTreatment}
+                            onChange={setCompanionTreatment}
+                          >
+                            {labels.companionTreated}
+                          </Check>
+                          {companionTreatment && (
+                            <CompanionVisitFields
+                              prefix="companion.visit"
+                              coordinators={coordinators}
+                              treatments={treatments}
+                              errors={errors}
+                            />
+                          )}
+                        </>
+                      )}
+                    </>
+                  )}
                   {companions.map(({ patientId, firstName, lastName }) => (
                     <NameFields
                       key={patientId}
@@ -318,13 +391,20 @@ function EditForm({
         <Button
           nativeButton={false}
           variant="ghost"
-          render={<Link href={`/patients/${id}`} />}
+          render={<Link href={creating ? "/patients" : `/patients/${id}`} />}
         >
           {t.common.cancel}
         </Button>
-        <Button type="submit" disabled={pending}>
+        <Button
+          type="submit"
+          disabled={pending || (creating && !coordinators.length)}
+        >
           {pending && <Spinner data-icon="inline-start" />}
-          {pending ? labels.saving : t.patients.saveChanges}
+          {pending
+            ? labels.saving
+            : creating
+              ? labels.save
+              : t.patients.saveChanges}
         </Button>
       </div>
     </form>
@@ -337,4 +417,34 @@ export function EditPatientForm(props: EditProps) {
   const [saves, setSaves] = useState(0);
   const onSaved = useCallback(() => setSaves((count) => count + 1), []);
   return <EditForm key={saves} {...props} onSaved={onSaved} />;
+}
+
+export function RegistrationForm({
+  coordinators,
+  treatments,
+}: {
+  coordinators: Coordinator[];
+  treatments: TreatmentOption[];
+}) {
+  return (
+    <EditPatientForm
+      id=""
+      creating
+      coordinators={coordinators}
+      treatments={treatments}
+      companions={[]}
+      locked={{ treatment: false, accommodation: false, transfer: false }}
+      defaults={{
+        firstName: "",
+        lastName: "",
+        arrivalDate: "",
+        departureDate: "",
+        arrivalTime: "",
+        departureTime: "",
+        coordinatorId: "",
+        availabilityNotes: "",
+        treatment: "",
+      }}
+    />
+  );
 }

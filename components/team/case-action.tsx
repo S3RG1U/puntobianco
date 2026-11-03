@@ -7,9 +7,11 @@ import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
 import { useI18n } from "@/lib/i18n/client";
 export function CaseAction({
+  menuItem = false,
   id,
   action,
 }: {
+  menuItem?: boolean;
   id: string;
   action: "start" | "complete";
 }) {
@@ -18,8 +20,9 @@ export function CaseAction({
   const router = useRouter();
   return (
     <Button
+      variant={menuItem ? "ghost" : action === "start" ? "outline" : "default"}
+      className={menuItem ? "w-full justify-start" : undefined}
       size="sm"
-      variant={action === "start" ? "outline" : "default"}
       disabled={pending}
       onClick={() =>
         start(async () => {
@@ -28,7 +31,9 @@ export function CaseAction({
             if (result.error) toast.error(result.error);
             else {
               toast.success(
-                action === "start" ? t.backOffice.started : t.backOffice.finished,
+                action === "start"
+                  ? t.backOffice.started
+                  : t.backOffice.finished,
               );
               router.refresh();
             }

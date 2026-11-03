@@ -92,6 +92,22 @@ function ApartmentForm({ onSaved }: { onSaved: () => void }) {
             </FieldError>
           )}
         </Field>
+        <Field data-invalid={!!state.errors?.address}>
+          <FieldLabel htmlFor="apartment-address">
+            {t.accommodations.address}
+          </FieldLabel>
+          <Input
+            id="apartment-address"
+            name="address"
+            required
+            maxLength={500}
+            placeholder={t.accommodations.addressHelp}
+            aria-invalid={!!state.errors?.address}
+          />
+          {state.errors?.address && (
+            <FieldError>{state.errors.address}</FieldError>
+          )}
+        </Field>
         <SelectField
           name="apartmentType"
           label={t.registration.apartmentType}
@@ -248,10 +264,12 @@ function AllocationForm({
   );
 }
 export function ManageAccommodationDialog({
+  menuItem = false,
   request,
   apartments,
   patientName,
 }: {
+  menuItem?: boolean;
   request: AccommodationRequest;
   apartments: Apartment[];
   patientName: string;
@@ -260,9 +278,19 @@ export function ManageAccommodationDialog({
   const [open, setOpen] = useState(false);
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger render={<Button variant="outline" size="sm" />}>
+      <DialogTrigger
+        render={
+          <Button
+            variant={menuItem ? "ghost" : "outline"}
+            size="sm"
+            className={menuItem ? "w-full justify-start" : undefined}
+          />
+        }
+      >
         {t.accommodations.manage}
-        <span className="sr-only">{t.accommodations.manageFor(patientName)}</span>
+        <span className="sr-only">
+          {t.accommodations.manageFor(patientName)}
+        </span>
       </DialogTrigger>
       <DialogContent>
         <DialogHeader>

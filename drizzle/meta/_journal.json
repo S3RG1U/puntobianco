@@ -36,6 +36,20 @@
       "when": 1793629446502,
       "tag": "0004_visit_events",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1793646830994,
+      "tag": "0005_tough_blink",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1793649625819,
+      "tag": "0006_outstanding_bloodscream",
+      "breakpoints": true
     }
   ]
 }

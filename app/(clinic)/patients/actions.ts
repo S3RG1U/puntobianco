@@ -5,7 +5,7 @@ import {
   recordApartmentChange,
   recordVisitEvent,
 } from "@/lib/patients/visit-events";
-import { and, eq, sql } from "drizzle-orm";
+import { and, eq, isNull, sql } from "drizzle-orm";
 import { z } from "zod";
 import { apartmentHasConflict } from "@/lib/accommodations/conflicts";
 import { revalidatePath } from "next/cache";
@@ -15,6 +15,7 @@ import { db, type Transaction } from "@/lib/db";
 import {
   patients,
   visitEvents,
+  transferPlans,
   patientVisits,
   patientCompanions,
   patientAccommodations,
@@ -404,15 +405,52 @@ export async function updatePatientVisit(
       // Pickup belongs to the scheduled leg, so changing it resets its status.
       for (const leg of ["arrival", "departure"] as const) {
         const scheduledAt = leg === "arrival" ? stay.arrival : stay.departure;
-        const previousAt = leg === "arrival" ? current.arrivalAt : current.departureAt;
-        if (!transfer || !existingTransfer ||
+        const previousAt =
+          leg === "arrival" ? current.arrivalAt : current.departureAt;
+        if (
+          !transfer ||
+          !existingTransfer ||
           scheduledAt.getTime() !== previousAt.getTime() ||
-          (transfer.direction === "one_way" && transfer.oneWayLeg !== leg)) {
-          await tx.delete(visitEvents).where(and(
-            eq(visitEvents.visitId, visitId),
-            eq(visitEvents.type, "transfer_picked_up"),
-            eq(visitEvents.leg, leg),
-          ));
+          (transfer.direction === "one_way" && transfer.oneWayLeg !== leg)
+        ) {
+          if (existingTransfer) {
+            const stillApplies =
+              transfer &&
+              (transfer.direction === "round_trip" ||
+                transfer.oneWayLeg === leg);
+            if (!stillApplies)
+              await tx
+                .delete(transferPlans)
+                .where(
+                  and(
+                    eq(transferPlans.transferId, existingTransfer.id),
+                    eq(transferPlans.leg, leg),
+                  ),
+                );
+            else
+              await tx
+                .update(transferPlans)
+                .set({
+                  completedAt: null,
+                  revision: sql`${transferPlans.revision} + 1`,
+                })
+                .where(
+                  and(
+                    eq(transferPlans.transferId, existingTransfer.id),
+                    eq(transferPlans.leg, leg),
+                    isNull(transferPlans.scheduledAt),
+                  ),
+                );
+          }
+          await tx
+            .delete(visitEvents)
+            .where(
+              and(
+                eq(visitEvents.visitId, visitId),
+                eq(visitEvents.type, "transfer_picked_up"),
+                eq(visitEvents.leg, leg),
+              ),
+            );
         }
       }
 

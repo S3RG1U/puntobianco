@@ -1,0 +1,1 @@
+ALTER TABLE "accommodations" ADD COLUMN "address" text DEFAULT '' NOT NULL;

@@ -1,7 +1,7 @@
 import { Suspense } from "react";
 import { redirect } from "next/navigation";
 import { SiteHeader } from "@/components/site-header";
-import { RegistrationForm } from "@/components/patients/patient-questionnaire";
+import { RegistrationForm } from "@/components/patients/edit-patient-form";
 import { Skeleton } from "@/components/ui/skeleton";
 import { requireSession } from "@/lib/auth/session";
 import { can, parseRoles } from "@/lib/auth/permissions";

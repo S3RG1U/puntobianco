@@ -61,6 +61,22 @@ export type TransferEvent = {
   start: string;
   leg: "arrival" | "departure";
   names: string[];
+  memberVisitIds?: string[];
+  revision?: number;
+  completedAt?: string | null;
+  pickup?: string | null;
+  dropoff?: string | null;
+  apartment?: { name: string; address: string } | null;
+  otherApartments?: { name: string; address: string }[];
+  history?: {
+    id: string;
+    action: string;
+    previousAt: string;
+    scheduledAt: string;
+    reason: string;
+    actor: string | null;
+    occurredAt: string;
+  }[];
 };
 export function transferCalendarEvents(
   bookings: TransferBooking[],
@@ -99,21 +115,32 @@ export function transferCalendarEvents(
           ),
       );
       if (sharedParent) return [];
+      const sharedCompanions = companions.filter(
+        (companion) =>
+          companion.visitId === booking.visitId &&
+          (!companion.treatmentVisitId ||
+            (companion[leg]?.getTime() === date.getTime() &&
+              bookings.some(
+                (child) =>
+                  child.visitId === companion.treatmentVisitId &&
+                  transferLegApplies(child, leg),
+              ))),
+      );
       const names = [
         `${booking.firstName} ${booking.lastName}`,
-        ...companions
-          .filter(
-            (c) =>
-              c.visitId === booking.visitId &&
-              (!c.treatmentVisitId || c[leg]?.getTime() === date.getTime()),
-          )
-          .map((c) => `${c.firstName} ${c.lastName}`),
+        ...sharedCompanions.map((c) => `${c.firstName} ${c.lastName}`),
       ];
       return [
         {
           id: `${booking.id}-${leg}`,
           visitId: booking.visitId,
           pickedUp: false,
+          memberVisitIds: [
+            booking.visitId,
+            ...sharedCompanions
+              .filter((c) => c.treatmentVisitId)
+              .map((c) => c.treatmentVisitId!),
+          ],
           title: `${leg === "arrival" ? "Sosire" : "Plecare"} ${clock.format(date)} – ${names.join(", ")}`,
           start: date.toISOString(),
           leg,

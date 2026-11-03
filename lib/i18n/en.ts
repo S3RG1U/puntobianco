@@ -5,6 +5,7 @@ const quantity = (total: number, one: string) =>
 
 export const en: Dictionary = {
   common: {
+    search: "Search",
     cancel: "Cancel",
     previous: "Previous",
     next: "Next",
@@ -296,6 +297,19 @@ export const en: Dictionary = {
     departureTime: "Departure time",
   },
   accommodations: {
+    booking: {"search": "Search Booking.com", "help": "Find apartments in Chișinău for this stay.", "adults": "Adults", "layoutHelp": "Dates, guest count and the apartment filter are sent to Booking.com. Check the bedroom count, sofa bed and living room in the listing before booking.", "datesInvalid": "Booking.com requires check-in today or later and checkout on a later date.", "open": "Open Booking.com"},
+    address: "Address",
+    addressHelp: "Street, building and apartment, city, country",
+    availability: "Availability",
+    available: "Free",
+    occupied: "Occupied",
+    availabilityHelp: "Select a date to see booked times. Marked days have at least one booking; availability is based on saved assignments.",
+    location: "Location",
+    directions: "Route and distance to Punto Bianco",
+    missingAddress: "Add an address to show this apartment on the map.",
+    saveAddress: "Save address",
+    addressSaved: "Address saved.",
+
     title: "Accommodation",
     subtitle: "Manage patient stays and assign matching apartments.",
     requests: "Patient requests",
@@ -341,6 +355,7 @@ export const en: Dictionary = {
     },
   },
   transfers: {
+    details: {"title": "Transfer details", "pickup": "Pick-up", "dropoff": "Drop-off", "notSet": "Location to be confirmed", "apartment": "Assigned apartment", "addressMissing": "The assigned apartment has no address yet. Confirm the exact location before driving.", "open": "View transfer", "edit": "Change schedule or route", "newMoment": "New date and time", "reason": "Reason for change", "reasonPlaceholder": "For example: flight delayed by two hours", "save": "Save changes", "cancel": "Cancel changes", "complete": "Mark as completed", "completed": "Completed", "reopen": "Reopen transfer", "scheduled": "Scheduled", "history": "Change history", "noHistory": "No changes recorded.", "saved": "Transfer updated.", "completeSaved": "Transfer completed.", "checkFields": "Choose a valid date and time and provide a reason.", "stale": "This transfer has changed. Refresh the calendar and try again.", "reopenFirst": "Reopen the completed transfer before changing it.", "tooEarly": "This transfer cannot be completed before its scheduled time.", "invalidDate": "Choose a valid date and time today or later. This time may not exist because of daylight saving.", "failed": "The transfer could not be updated. Try again.", "timeZone": "All times are in Chișinău local time.", "reschedule": "Schedule or route changed", "reopened": "Transfer reopened", "shared": "Changes apply to everyone listed on this shared transfer.", "otherStops": "Other apartment stops", "navigate": "Open location in Maps"},
     headerTitle: "Transfer calendar",
     metadataTitle: "Transfer calendar",
     title: "Transfers",

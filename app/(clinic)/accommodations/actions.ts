@@ -35,6 +35,7 @@ export async function createApartment(
   const parsed = z
     .object({
       name: z.string().trim().min(1, "nameRequired").max(200, "nameTooLong"),
+      address: z.string().trim().min(1).max(500),
       apartmentType: z.enum(apartmentValues, "apartmentTypeRequired"),
     })
     .safeParse(Object.fromEntries(form));
@@ -95,8 +96,7 @@ export async function updateAccommodation(
         .from(patientAccommodations)
         .where(eq(patientAccommodations.id, data.id))
         .for("update");
-      if (!request)
-        throw new AccommodationError(errors.requestGone);
+      if (!request) throw new AccommodationError(errors.requestGone);
       const [visit] = await tx
         .select({
           arrival: patientVisits.arrivalAt,
@@ -151,12 +151,42 @@ export async function updateAccommodation(
     });
   } catch (error) {
     const message =
-      error instanceof AccommodationError
-        ? error.message
-        : errors.updateFailed;
+      error instanceof AccommodationError ? error.message : errors.updateFailed;
     return { status: "error", message };
   }
   revalidatePath("/accommodations");
   revalidatePath("/(clinic)/patients/[id]", "page");
+  return { status: "success" };
+}
+
+export async function updateApartmentAddress(
+  _previous: FormState,
+  form: FormData,
+): Promise<FormState> {
+  const { user } = await requireSession();
+  const { t } = await getI18n();
+  if (!can(parseRoles(user.role), "accommodation", "update"))
+    return {
+      status: "error",
+      message: t.accommodations.errors.managePermission,
+    };
+  const parsed = z
+    .object({ id: z.uuid(), address: z.string().trim().min(1).max(500) })
+    .safeParse(Object.fromEntries(form));
+  if (!parsed.success)
+    return { status: "error", errors: fieldErrors(t, parsed.error.issues) };
+  try {
+    const updated = await db
+      .update(accommodations)
+      .set({ address: parsed.data.address })
+      .where(eq(accommodations.id, parsed.data.id))
+      .returning({ id: accommodations.id });
+    if (!updated.length)
+      return { status: "error", message: t.accommodations.errors.addFailed };
+  } catch {
+    return { status: "error", message: t.accommodations.errors.addFailed };
+  }
+  revalidatePath("/accommodations");
+  revalidatePath(`/accommodations/${parsed.data.id}`);
   return { status: "success" };
 }

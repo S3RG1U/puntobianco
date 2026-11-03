@@ -210,6 +210,7 @@ export const accommodations = pgTable(
   {
     id: uuid("id").primaryKey().defaultRandom(),
     name: text("name").notNull(),
+    address: text("address").notNull().default(""),
     apartmentType: apartmentType("apartment_type").notNull(),
   },
   (t) => [
@@ -296,6 +297,50 @@ export const patientTransfers = pgTable("patient_transfers", {
   direction: transferDirection("direction").notNull(),
   oneWayLeg: transferLeg("one_way_leg").notNull().default("arrival"),
 });
+
+// Driver plans are separate from the patient's stay and apartment reservation.
+export const transferPlans = pgTable(
+  "transfer_plans",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    transferId: uuid("transfer_id")
+      .notNull()
+      .references(() => patientTransfers.id, { onDelete: "cascade" }),
+    leg: transferLeg("leg").notNull(),
+    scheduledAt: timestamp("scheduled_at", { withTimezone: true }),
+    pickup: text("pickup"),
+    dropoff: text("dropoff"),
+    completedAt: timestamp("completed_at", { withTimezone: true }),
+    revision: integer("revision").notNull().default(0),
+  },
+  (t) => [unique("transfer_plans_leg_unique").on(t.transferId, t.leg)],
+);
+
+export const transferChanges = pgTable(
+  "transfer_changes",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    transferId: uuid("transfer_id")
+      .notNull()
+      .references(() => patientTransfers.id, { onDelete: "cascade" }),
+    leg: transferLeg("leg").notNull(),
+    action: text("action").notNull(),
+    previousAt: timestamp("previous_at", { withTimezone: true }).notNull(),
+    scheduledAt: timestamp("scheduled_at", { withTimezone: true }).notNull(),
+    reason: text("reason").notNull(),
+    pickup: text("pickup"),
+    dropoff: text("dropoff"),
+    actorId: text("actor_id").references(() => users.id, {
+      onDelete: "set null",
+    }),
+    occurredAt: timestamp("occurred_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [
+    index("transfer_changes_leg_idx").on(t.transferId, t.leg, t.occurredAt),
+  ],
+);
 
 // What happened to a visit, for its timeline. Names are copied so the history
 // stays true after an apartment is renamed. No treatment text is stored here.

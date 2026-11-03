@@ -1,6 +1,7 @@
 "use server";
 
-import { and, eq } from "drizzle-orm";
+import { and, asc, eq, inArray, sql } from "drizzle-orm";
+import { alias } from "drizzle-orm/pg-core";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
@@ -13,6 +14,7 @@ import {
   patientTransfers,
   patientVisits,
   visitEvents,
+  transferPlans,
 } from "@/lib/db/schema";
 import { getI18n } from "@/lib/i18n/server";
 import { publishTeamEvent } from "@/lib/notifications/events";
@@ -43,12 +45,20 @@ export async function setTransferPickup(
     leg === "arrival" ? visit.arrival : visit.departure;
   try {
     await db.transaction(async (tx) => {
+      const linked = await tx.select({ visitId: patientCompanions.treatmentVisitId })
+        .from(patientCompanions).where(eq(patientCompanions.visitId, visitId));
+      await tx.select({ id: patientTransfers.id }).from(patientTransfers)
+        .where(inArray(patientTransfers.visitId, [visitId, ...linked.flatMap((c) => c.visitId ? [c.visitId] : [])]))
+        .orderBy(asc(patientTransfers.id)).for("update");
+      const plan = alias(transferPlans, "pickup_plan");
+      const effectiveArrival = sql<Date>`case when ${plan.leg} = 'arrival' then coalesce(${plan.scheduledAt}, ${patientVisits.arrivalAt}) else ${patientVisits.arrivalAt} end`.mapWith(patientVisits.arrivalAt);
+      const effectiveDeparture = sql<Date>`case when ${plan.leg} = 'departure' then coalesce(${plan.scheduledAt}, ${patientVisits.departureAt}) else ${patientVisits.departureAt} end`.mapWith(patientVisits.departureAt);
       const [booking] = await tx
         .select({
           direction: patientTransfers.direction,
           oneWayLeg: patientTransfers.oneWayLeg,
-          arrival: patientVisits.arrivalAt,
-          departure: patientVisits.departureAt,
+          arrival: effectiveArrival,
+          departure: effectiveDeparture,
           firstName: patients.firstName,
           lastName: patients.lastName,
         })
@@ -58,6 +68,7 @@ export async function setTransferPickup(
           eq(patientVisits.id, patientTransfers.visitId),
         )
         .innerJoin(patients, eq(patients.id, patientVisits.patientId))
+        .leftJoin(plan, and(eq(plan.transferId, patientTransfers.id), eq(plan.leg, leg)))
         .where(eq(patientTransfers.visitId, visitId));
       if (!booking || !transferLegApplies(booking, leg))
         throw new PickupError(errors.pickupInvalid);
@@ -70,8 +81,8 @@ export async function setTransferPickup(
           visitId: patientTransfers.visitId,
           direction: patientTransfers.direction,
           oneWayLeg: patientTransfers.oneWayLeg,
-          arrival: patientVisits.arrivalAt,
-          departure: patientVisits.departureAt,
+          arrival: effectiveArrival,
+          departure: effectiveDeparture,
         })
         .from(patientCompanions)
         .innerJoin(
@@ -82,6 +93,7 @@ export async function setTransferPickup(
           patientVisits,
           eq(patientVisits.id, patientTransfers.visitId),
         )
+        .leftJoin(plan, and(eq(plan.transferId, patientTransfers.id), eq(plan.leg, leg)))
         .where(eq(patientCompanions.visitId, visitId));
       const visitIds = [
         visitId,

@@ -170,8 +170,10 @@ export function CreateTreatmentDialog() {
 }
 
 export function EditTreatmentDialog({
+  menuItem = false,
   treatment,
 }: {
+  menuItem?: boolean;
   treatment: EditableTreatment;
 }) {
   const { t } = useI18n();
@@ -179,7 +181,13 @@ export function EditTreatmentDialog({
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger
-        render={<Button variant="outline" size="sm" />}
+        render={
+          <Button
+            variant={menuItem ? "ghost" : "outline"}
+            size="sm"
+            className={menuItem ? "w-full justify-start" : undefined}
+          />
+        }
         aria-label={t.treatments.editFor(treatment.name)}
       >
         {t.treatments.edit}
