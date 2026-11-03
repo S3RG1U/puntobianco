@@ -149,12 +149,22 @@ export function readCompanion(form: FormData) {
     firstName: String(form.get("companion.firstName") ?? ""),
     lastName: String(form.get("companion.lastName") ?? ""),
   };
+  if (form.get("companionTreatment") !== "on")
+    return { ...companion, visit: undefined };
+  // The form follows the patient's stay and coordinator; the API can send its own.
+  const own = readVisit(form, "companion.visit");
+  const patient = readVisit(form, "patient");
   return {
     ...companion,
-    visit:
-      form.get("companionTreatment") === "on"
-        ? { ...readVisit(form, "companion.visit"), ...companion }
-        : undefined,
+    visit: {
+      ...own,
+      ...companion,
+      arrivalDate: own.arrivalDate || patient.arrivalDate,
+      arrivalTime: own.arrivalTime || patient.arrivalTime,
+      departureDate: own.departureDate || patient.departureDate,
+      departureTime: own.departureTime || patient.departureTime,
+      coordinatorId: own.coordinatorId || patient.coordinatorId,
+    },
   };
 }
 

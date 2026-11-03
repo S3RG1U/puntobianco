@@ -409,7 +409,6 @@ function EditForm({
                           {companionTreatment && (
                             <CompanionVisitFields
                               prefix="companion.visit"
-                              coordinators={coordinators}
                               treatments={treatments}
                               errors={errors}
                             />

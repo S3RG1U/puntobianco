@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import {
   completedTabs,
+  readCompanion,
   registrationSchema,
   readVisit,
   visitSchema,
@@ -193,4 +194,35 @@ test("a companion being added on an existing registration must be filled in too"
       }),
     ).includes("companions"),
   );
+});
+
+test("a treated companion follows the patient's stay and coordinator", () => {
+  const treated = {
+    ...filledVisit,
+    hasCompanion: "on",
+    companionTreatment: "on",
+    "companion.firstName": "Eva",
+    "companion.lastName": "Pop",
+    "companion.visit.availabilityNotes": "",
+    "companion.visit.treatment": "Checkup",
+  };
+  const { visit } = readCompanion(filledForm(treated))!;
+  assert.equal(visit?.arrivalDate, "2026-11-10");
+  assert.equal(visit?.departureTime, "18:00");
+  assert.equal(visit?.coordinatorId, "coordinator-id");
+  assert.equal(visit?.firstName, "Eva");
+  assert.ok(completedTabs(filledForm(treated)).includes("companions"));
+});
+test("a companion's own stay sent through the API is kept", () => {
+  const { visit } = readCompanion(
+    filledForm({
+      ...filledVisit,
+      hasCompanion: "on",
+      companionTreatment: "on",
+      "companion.visit.arrivalDate": "2026-12-01",
+      "companion.visit.coordinatorId": "other",
+    }),
+  )!;
+  assert.equal(visit?.arrivalDate, "2026-12-01");
+  assert.equal(visit?.coordinatorId, "other");
 });

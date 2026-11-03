@@ -1,7 +1,6 @@
 "use client";
 import { useState, type ReactNode } from "react";
 import { SelectField } from "@/components/forms/select-field";
-import { StayDateRange } from "@/components/forms/stay-date-range";
 import {
   TreatmentSelect,
   type TreatmentOption,
@@ -108,12 +107,10 @@ export function NameFields({
 
 function CareFields({
   prefix,
-  coordinators,
   treatments,
   errors,
 }: {
   prefix: string;
-  coordinators: Coordinator[];
   treatments: TreatmentOption[];
   errors: Errors;
 }) {
@@ -121,12 +118,6 @@ function CareFields({
   const labels = t.registration;
   return (
     <FieldGroup>
-      <SelectField
-        name={`${prefix}.coordinatorId`}
-        label={labels.responsibleCoordinator}
-        options={coordinators.map((c) => ({ value: c.id, label: c.name }))}
-        error={errors[`${prefix}.coordinatorId`]}
-      />
       <Field data-invalid={!!errors[`${prefix}.treatment`]}>
         <FieldLabel htmlFor={`${prefix}.treatment-search`}>
           {labels.plannedTreatment}
@@ -289,15 +280,13 @@ export function TransferDetails({
   );
 }
 
-// A companion's own treatment visit: one question with every visit field.
+// A companion's own treatment visit. The stay and coordinator follow the patient.
 export function CompanionVisitFields({
   prefix,
-  coordinators,
   treatments,
   errors,
 }: {
   prefix: string;
-  coordinators: Coordinator[];
   treatments: TreatmentOption[];
   errors: Errors;
 }) {
@@ -307,10 +296,9 @@ export function CompanionVisitFields({
   const [transfer, setTransfer] = useState(false);
   return (
     <FieldGroup>
-      <StayDateRange prefix={prefix} errors={errors} />
+      <FieldDescription>{labels.companionFollows}</FieldDescription>
       <CareFields
         prefix={prefix}
-        coordinators={coordinators}
         treatments={treatments}
         errors={errors}
       />

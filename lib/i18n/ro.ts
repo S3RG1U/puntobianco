@@ -318,6 +318,7 @@ export const ro = {
     treatmentNotes: "Note despre tratament",
     treatmentNotesPlaceholder: "De exemplu: alergii, preferințe, indicații pentru echipă",
     sectionComplete: "completat",
+    companionFollows: "Datele sejurului și coordonatorul sunt aceleași ca ale pacientului.",
     accommodation: "Cazare",
     accommodationHelp: "Solicitați cazarea acum. Apartamentul poate fi atribuit ulterior.",
     accommodationNeeded: "Este necesară cazare",

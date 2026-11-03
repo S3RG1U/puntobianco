@@ -269,6 +269,7 @@ export const en: Dictionary = {
     treatmentNotes: "Treatment notes",
     treatmentNotesPlaceholder: "For example: allergies, preferences, instructions for the team",
     sectionComplete: "completed",
+    companionFollows: "The stay dates and coordinator are the same as the patient's.",
     accommodation: "Accommodation",
     accommodationHelp: "Request accommodation now. An apartment can be assigned later.",
     accommodationNeeded: "Accommodation needed",

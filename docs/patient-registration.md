@@ -20,7 +20,7 @@ The existing database contained only Better Auth tables. The new model separates
 
 Apartment types: `studio`, `one_bedroom_sofa`, `two_bedrooms`, `two_bedrooms_living`.
 
-No companion/accommodation/transfer row means the service or companion is not requested. This avoids separate flags that could disagree with the related records. A non-treatment companion has a patient identity but no treatment visit. A treatment companion has their own visit with dates, availability, treatment, coordinator, accommodation and transfer choices.
+No companion/accommodation/transfer row means the service or companion is not requested. This avoids separate flags that could disagree with the related records. A non-treatment companion has a patient identity but no treatment visit. A treatment companion has their own visit with availability, treatment, accommodation and transfer choices. The registration form copies the dates and coordinator from the patient; the API may send its own.
 
 Accommodation is complimentary for the recorded number of days, not necessarily the whole visit. Zero free days is required when it is not complimentary. A requested type can be saved before an apartment is allocated. A composite foreign key ensures the assigned apartment matches the requested type.
 
