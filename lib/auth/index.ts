@@ -4,16 +4,17 @@ import { betterAuth } from "better-auth";
 import { APIError, createAuthMiddleware, getSessionFromCtx } from "better-auth/api";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { nextCookies } from "better-auth/next-js";
-import { admin } from "better-auth/plugins";
+import { admin, bearer } from "better-auth/plugins";
 
 import { db } from "../db";
 import * as schema from "../db/schema";
 import { ac, roles } from "./permissions";
 
 export const auth = betterAuth({
-  trustedOrigins: process.env.NODE_ENV === "development"
-    ? ["http://localhost:3000", "http://192.168.100.116:3000"]
-    : [],
+  trustedOrigins: [
+    ...(process.env.NODE_ENV === "development" ? ["http://localhost:3000", "http://192.168.100.116:3000"] : []),
+    ...(process.env.AUTH_TRUSTED_ORIGINS ?? "").split(",").filter(Boolean),
+  ],
   database: drizzleAdapter(db, { provider: "pg", schema, usePlural: true }),
   emailAndPassword: {
     enabled: true,
@@ -41,6 +42,7 @@ export const auth = betterAuth({
     }),
   },
   plugins: [
+    bearer({ requireSignature: true }),
     // The default only applies if a user somehow has no role, so keep it minimal.
     admin({ ac, roles, defaultRole: "driver" }),
     // Must stay last so cookies set during server calls reach the browser.

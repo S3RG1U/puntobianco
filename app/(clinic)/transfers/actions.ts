@@ -5,7 +5,8 @@ import { alias } from "drizzle-orm/pg-core";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
-import { can, parseRoles } from "@/lib/auth/permissions";
+import { parseRoles } from "@/lib/auth/permissions";
+import { canCurrentActor as can } from "@/lib/auth/authorization";
 import { requireSession } from "@/lib/auth/session";
 import { db } from "@/lib/db";
 import {

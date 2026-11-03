@@ -84,3 +84,7 @@ Without a saved language preference, the app uses the browser's preferred suppor
 Accommodation request actions include a Booking.com search dialog. It carries over clinic-local arrival/departure dates, lets staff choose the adult guest count, and opens an apartment-filtered search in Chișinău. The requested layout is shown for reference; bedroom count, sofa beds and living rooms must be checked in the listing. This is an external search link, not a live Demand API integration, and no patient names are sent.
 
 Driver transfers show assigned apartment destinations for arrivals and pickup addresses for departures; any unknown endpoint is marked for confirmation. Calendar hover previews and day cards share the same route details. The mobile transfer panel supports a separate transfer date/time, editable route, a required change reason, completion and reopening. Changes on a shared trip apply to its listed treatment visits together. Stay and reservation dates are not changed by the driver. The transfer history records previous/new times, reason, actor and completion/reopening. Concurrent edits are checked against the displayed schedule version. Completion becomes available at the scheduled time.
+
+## External API
+
+The versioned app/integration API is documented in [docs/api.md](docs/api.md), with an [OpenAPI reference](docs/openapi.json). Apply migrations before use, then issue scoped server credentials with `pnpm api:key`. Native apps use signed Better Auth bearer sessions.

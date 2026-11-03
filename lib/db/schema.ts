@@ -441,3 +441,38 @@ export const telegramDeliveries = pgTable(
     index("telegram_deliveries_due_idx").on(t.deliveredAt, t.availableAt),
   ],
 );
+
+// External credentials are bound to a real user; effective access is scopes ∩ roles.
+export const apiCredentials = pgTable("api_credentials", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  name: text("name").notNull(),
+  tokenHash: text("token_hash").notNull().unique(),
+  userId: text("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  scopes: text("scopes").array().notNull(),
+  expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+  revokedAt: timestamp("revoked_at", { withTimezone: true }),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+});
+export const apiRequests = pgTable("api_requests", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  principal: text("principal").notNull(),
+  method: text("method").notNull(),
+  path: text("path").notNull(),
+  status: integer("status"),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+});
+// Pending records intentionally survive crashes: never repeat an uncertain write.
+export const apiIdempotency = pgTable("api_idempotency", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  principal: text("principal").notNull(),
+  key: text("key").notNull(),
+  fingerprint: text("fingerprint").notNull(),
+  response: text("response"),
+  status: integer("status"),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+}, t => [unique("api_idempotency_principal_key").on(t.principal, t.key)]);
+export const apiRateLimits = pgTable("api_rate_limits", {
+  principal: text("principal").primaryKey(),
+  bucket: integer("bucket").notNull(),
+  count: integer("count").notNull(),
+});

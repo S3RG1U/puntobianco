@@ -9,7 +9,8 @@ import { and, eq, isNull, sql } from "drizzle-orm";
 import { z } from "zod";
 import { apartmentHasConflict } from "@/lib/accommodations/conflicts";
 import { revalidatePath } from "next/cache";
-import { can, parseRoles } from "@/lib/auth/permissions";
+import { parseRoles } from "@/lib/auth/permissions";
+import { canCurrentActor as can } from "@/lib/auth/authorization";
 import { requireSession } from "@/lib/auth/session";
 import { db, type Transaction } from "@/lib/db";
 import {
